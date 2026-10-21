@@ -26,8 +26,6 @@ from pathlib import Path
 
 import pytest
 
-playwright_api = pytest.importorskip("playwright.sync_api", reason="Playwright is not installed.")
-
 pytestmark = pytest.mark.browser
 
 #: The root of the repository.
@@ -35,33 +33,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 #: Where the foliate-js reader is installed.
 FOLIATE_DIR = Path(__file__).parent / "assets" / "foliate-js"
-
-
-@pytest.fixture(scope="session")
-def browser() -> Iterator[object]:
-    """Return a Chromium browser, or skip the test when it is missing."""
-    with playwright_api.sync_playwright() as playwright:
-        try:
-            instance = playwright.chromium.launch()
-        except Exception as exc:  # pragma: no cover - depends on the machine
-            pytest.skip(f"Chromium is not available: {exc}")
-        yield instance
-        instance.close()
-
-
-@pytest.fixture(scope="session")
-def page_factory(browser: object) -> Iterator[object]:
-    """Return a factory that opens a new page."""
-    contexts: list[object] = []
-
-    def factory(**kwargs: object) -> object:
-        context = browser.new_context(**kwargs)  # type: ignore[attr-defined]
-        contexts.append(context)
-        return context.new_page()
-
-    yield factory
-    for context in contexts:
-        context.close()  # type: ignore[attr-defined]
 
 
 @pytest.fixture(scope="session")
