@@ -149,10 +149,25 @@ src/scan2epub/
 ├── domain/           # Modelos y puertos puros (sin I/O, sin frameworks)
 ├── application/      # Etapas del pipeline, caché, orquestación de jobs
 ├── infrastructure/   # Adaptadores: OCR, corrección, imagen, PDF, EPUB, almacenamiento
-├── api/              # App FastAPI, routers, SSE, worker
+├── api/              # App FastAPI, routers, SSE, worker        (Fase 4)
 ├── cli/              # Comandos Typer
-└── eval/             # Métricas CER / WER y runner de benchmarks
+└── eval/             # Métricas CER / WER y runner de benchmarks (Fase 2)
 ```
+
+## Pruebas
+
+La suite tiene cuatro capas. La del navegador es la más eloquent: el libro
+generado se abre en **foliate-js**, el lector EPUB 3 de referencia, en un
+Chromium real, y se comprueba que refluye, que la navegación funciona y que
+las notas al pie están enlazadas.
+
+```bash
+uv run pytest                                        # todo
+uv run pytest tests/browser -v                       # el navegador real
+uv run pytest --cov=src/scan2epub --cov-report=term  # con la cobertura
+```
+
+Véase [`docs/testing.md`](docs/testing.md).
 
 ## Benchmarks
 
@@ -177,11 +192,14 @@ script de reproducción.
 
 | Documento | Contenido |
 | --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | Capas, contratos de etapa, modelo de datos |
-| [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Escribe tu propio `OcrEngine` / `TextCorrector` |
+| [`docs/architecture.md`](docs/architecture.md) | Capas, contratos de etapa, modelo de datos, seguridad del corrector |
+| [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Escribe tu propio `OcrEngine` / `TextCorrector` en menos de 50 líneas |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, variables de entorno, proveedores |
 | [`docs/usage.md`](docs/usage.md) | Referencia de la CLI y recetas |
+| [`docs/testing.md`](docs/testing.md) | Las cuatro capas de la suite y los tests de navegador |
+| [`docs/epub-layout.md`](docs/epub-layout.md) | La anatomía del EPUB generado, archivo por archivo |
 | [`docs/benchmarks.md`](docs/benchmarks.md) | Metodología de evaluación y resultados |
+| [`docs/naming.md`](docs/naming.md) | Por qué el proyecto se llama `scan2epub` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Flujo de desarrollo, convención de commits |
 | [`SECURITY.md`](SECURITY.md) | Reportar vulnerabilidades |
 | [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Licencias de dependencias y librerías copyleft descartadas |

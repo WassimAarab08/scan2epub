@@ -85,6 +85,7 @@ uv run ruff format --check .      # formatting
 uv run ruff check .               # lint
 uv run pyright                    # strict type checking
 uv run pytest --cov=src/scan2epub --cov-report=term-missing
+uv run python scripts/check_licenses.py   # no copyleft dependency
 ```
 
 Type annotations are required and `pyright` runs in **strict** mode. Public
@@ -93,6 +94,21 @@ functions and methods need docstrings in the imperative mood ("Return the
 
 Coverage must stay at or above **80 %** for `src/scan2epub/domain` and
 `src/scan2epub/application`. New code without tests will fail CI.
+
+### The browser tests
+
+The browser tests open the generated book in a real browser and in
+**foliate-js**, the reference EPUB 3 reader. They are the strongest proof that
+the output is a real book and not a ZIP file with some XML inside.
+
+```bash
+uv run playwright install chromium              # once
+uv run python scripts/fetch_browser_assets.py   # once: installs foliate-js
+uv run pytest tests/browser -v
+```
+
+They are skipped, not failed, when the browser is not installed. The full
+guide is in [`docs/testing.md`](docs/testing.md).
 
 ## Commit conventions
 

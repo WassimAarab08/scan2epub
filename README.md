@@ -147,10 +147,25 @@ src/scan2epub/
 ├── domain/           # Pure models and ports (no I/O, no framework imports)
 ├── application/      # Pipeline stages, cache, job orchestration
 ├── infrastructure/   # Adapters: OCR, correction, imaging, PDF, EPUB, storage
-├── api/              # FastAPI app, routers, SSE, worker
+├── api/              # FastAPI app, routers, SSE, worker     (Phase 4)
 ├── cli/              # Typer commands
-└── eval/             # CER / WER metrics and benchmark runner
+└── eval/             # CER / WER metrics and benchmark runner (Phase 2)
 ```
+
+## Testing
+
+The suite has four layers. The browser one is the most telling: the
+generated book is opened in **foliate-js**, the reference EPUB 3 reader, in a
+real Chromium, and checked for reflow, working navigation and linked
+footnotes.
+
+```bash
+uv run pytest                                        # everything
+uv run pytest tests/browser -v                       # the real browser
+uv run pytest --cov=src/scan2epub --cov-report=term  # with the coverage
+```
+
+See [`docs/testing.md`](docs/testing.md).
 
 ## Benchmarks
 
@@ -175,11 +190,14 @@ reproduction script.
 
 | Document | Contents |
 | --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model |
-| [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` |
+| [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model, the safety of the corrector |
+| [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` in under 50 lines |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, environment variables, providers |
 | [`docs/usage.md`](docs/usage.md) | CLI reference and recipes |
+| [`docs/testing.md`](docs/testing.md) | The four layers of the test suite and the browser tests |
+| [`docs/epub-layout.md`](docs/epub-layout.md) | The anatomy of the generated EPUB, file by file |
 | [`docs/benchmarks.md`](docs/benchmarks.md) | Evaluation methodology and results |
+| [`docs/naming.md`](docs/naming.md) | Why the project is called `scan2epub` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow, commit conventions |
 | [`SECURITY.md`](SECURITY.md) | Reporting vulnerabilities |
 | [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Dependency licenses and rejected copyleft libs |
