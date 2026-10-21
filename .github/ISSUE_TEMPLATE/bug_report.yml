@@ -1,0 +1,72 @@
+---
+name: Bug report
+description: Something is not working as expected
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        **Please do not attach copyrighted book scans.** Use a public-domain
+        sample from `samples/` or a self-made synthetic page.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you observe, and what did you expect instead?
+      placeholder: The output contained the running head of every page in the EPUB.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact command or UI actions.
+      render: shell
+      placeholder: |
+        scan2epub convert libro.pdf -o libro.epub --ocr tesseract
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `scan2epub convert ... --verbose` or the API response. Redact API keys.
+      render: shell
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: Page count, scanned vs. text PDF, language, rough era and quality of the scan.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `scan2epub doctor`.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: license
+    attributes:
+      label: Licensing
+      options:
+        - label: The material I am reporting with is public domain or I own the rights, and it contains no personal data.
+          required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I read the Code of Conduct.
+          required: true

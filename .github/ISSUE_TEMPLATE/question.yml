@@ -1,0 +1,25 @@
+---
+name: Question or discussion
+description: Ask a question about usage, configuration or design
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      placeholder: How do I run TeleOCR on a machine with 8 GB of VRAM?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to achieve, and what have you already tried?
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: Your `config.toml` (redact API keys) and the command you ran.
+      render: shell

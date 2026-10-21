@@ -1,0 +1,54 @@
+---
+name: Feature request
+description: Suggest an improvement or a new capability
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that is hard or impossible today?
+      placeholder: I need to OCR 18th-century Spanish books with long-s, but the running head survives on chapter-opening pages.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like the tool to do? A sketch is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing".
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - OCR engines
+        - Text cleaning
+        - LLM correction
+        - EPUB generation
+        - CLI
+        - Web UI / reader
+        - API
+        - Evaluation / benchmarks
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to implement this myself.
+        - label: This feature does not require a new third-party dependency.
+          required: true

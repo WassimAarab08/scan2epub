@@ -1,0 +1,61 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# --- Tooling caches ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Project runtime data ---
+.cache/
+.scan2epub/
+*.epub
+!samples/**/*.epub
+*.db
+*.sqlite3
+work/
+out/
+
+# --- Model / HF cache (never commit weights) ---
+models/
+*.safetensors
+*.bin
+*.onnx
+*.mlmodel
+*.pt
+*.pth
+
+# --- Node / Angular ---
+node_modules/
+web/dist/
+web/.angular/
+web/out-tsc/
+npm-debug.log*
+yarn-error.log*
+
+# --- Editors / OS ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Local secrets ---
+.env
+.env.*
+!.env.example
+config.local.toml
+secrets.toml

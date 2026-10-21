@@ -1,0 +1,194 @@
+# scan2epub
+
+**Turn scanned public-domain books into clean, reflowable EPUB 3 — with AI when you want it, fully offline when you don't.**
+
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Code of Conduct](https://img.shields.io/badge/CoC-Contributor%20Covenant-blue.svg)](CODE_OF_CONDUCT.md)
+
+> Read it in your language: [Español (README.es.md)](README.es.md)
+
+---
+
+## Why
+
+Scanned books from the 18th and 19th centuries are a mess to read on an e-reader:
+
+- Long **ſ** (long s) and typographic ligatures (`ct`, `st`, `ſt`) instead of modern letters.
+- **Hyphenation at the end of the line** splitting words across lines.
+- Running **headers, footers and page numbers** on every page.
+- Paragraphs that **break across pages**.
+- Ink blots, skewed pages, foxing, warped binding.
+- Two-column layouts, footnotes, illustrations, marginalia.
+
+`scan2epub` rebuilds those pages as a **reflowable EPUB 3** document: you pick the
+font, the size, the line height, the margins and the theme (light / dark /
+sepia) and the reader does the rest.
+
+It is built for **public-domain literature**, with a particular focus on
+**Spanish-language** material from the 18th and 19th centuries.
+
+## Before / after
+
+| Scanned source page | Generated EPUB 3 (reflowable) |
+| --- | --- |
+| ![Scanned page with long s, running head and hyphenated lines](docs/images/before.png) | ![Reflowable EPUB text in a reader](docs/images/after.png) |
+
+> The same content: the running head is gone, the long `ſ` is normalised, the
+> hyphenated words are rejoined and the paragraph flows naturally.
+
+## Quick start
+
+### One command with Docker
+
+```bash
+docker compose up
+```
+
+Then open <http://localhost:8000> and drop a PDF in.
+
+### Local install
+
+```bash
+git clone https://github.com/WassimAarab08/scan2epub.git
+cd scan2epub
+uv sync --all-extras
+uv run scan2epub convert libro.pdf -o libro.epub
+```
+
+Requires Python 3.12+ and (for the default engine) the `tesseract` binary.
+
+## CLI
+
+```bash
+# Local OCR only — fully offline, no API keys, no network
+scan2epub convert libro.pdf -o libro.epub --ocr tesseract
+
+# Local vision-language model (better on degraded scans)
+scan2epub convert libro.pdf -o libro.epub --ocr teleocr
+
+# Local VLM + local LLM post-correction via Ollama
+scan2epub convert libro.pdf -o libro.epub --ocr paddleocr-vl --llm ollama/qwen3
+
+# Remote VLM through LiteLLM (any OpenAI-compatible provider)
+scan2epub convert libro.pdf -o libro.epub --ocr litellm/gemini-2.5-flash
+
+# Show the estimated cost before spending money
+scan2epub estimate libro.pdf --ocr litellm/gpt-4o-mini --llm litellm/gpt-4o-mini
+```
+
+More examples in [`docs/usage.md`](docs/usage.md).
+
+## Features
+
+- **Deterministic cleaning first.** Running heads, folio numbers, end-of-line
+  hyphens, long `ſ`, ligatures and cross-page paragraphs are fixed with
+  deterministic rules — no model required, fully reproducible.
+- **Pluggable AI.** `OcrEngine` and `TextCorrector` are ports. Tesseract,
+  TeleOCR, PaddleOCR-VL, Kraken, and any LiteLLM-supported remote model ship as
+  adapters. Add your own in under 50 lines.
+- **Safe LLM post-correction.** Corrections that drift too far from the original
+  (normalized edit distance) are rejected and the original is kept. Every diff
+  is stored for review.
+- **Cost control.** Token and price estimation before a paid run, a hard
+  budget cap, retries with exponential backoff and rate limiting. API keys are
+  only read from environment variables and are never logged.
+- **Resumable.** Every stage is cached per page, keyed by content hash, so an
+  interrupted 800-page job continues where it stopped.
+- **Hand-written EPUB 3.** No `EbookLib`. The CSS is minimal and never forces a
+  font or a font size, so reader preferences win.
+- **Own reader.** An Angular web app with drag-and-drop upload, per-page
+  side-by-side review against the scan, and an integrated reader with
+  font/size/line-height/margin controls and light/dark/sepia themes.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Interfaces
+    CLI[CLI<br/>Typer]
+    API[REST API<br/>FastAPI + SSE]
+    WEB[Web UI<br/>Angular]
+  end
+  subgraph Application
+    PIPE[Pipeline<br/>9 cached stages]
+  end
+  subgraph Domain
+    PORTS[Ports<br/>OcrEngine · TextCorrector]
+  end
+  subgraph Adapters
+    OCR[Tesseract · TeleOCR<br/>PaddleOCR-VL · Kraken · LiteLLM]
+    CORR[LiteLLM corrector<br/>+ edit-distance guardrails]
+    COST[Cost estimator<br/>+ budget guard]
+  end
+  subgraph Storage
+    CACHE[(SQLite cache<br/>+ blob store)]
+    JOBS[(SQLite job queue)]
+  end
+  CLI --> PIPE
+  API --> PIPE
+  WEB --> API
+  PIPE --> PORTS
+  PORTS -.implemented by.-> OCR
+  PORTS -.implemented by.-> CORR
+  CORR --> COST
+  PIPE --> CACHE
+  API --> JOBS
+```
+
+Full details: [`docs/architecture.md`](docs/architecture.md).
+
+## Project layout
+
+```
+src/scan2epub/
+├── domain/           # Pure models and ports (no I/O, no framework imports)
+├── application/      # Pipeline stages, cache, job orchestration
+├── infrastructure/   # Adapters: OCR, correction, imaging, PDF, EPUB, storage
+├── api/              # FastAPI app, routers, SSE, worker
+├── cli/              # Typer commands
+└── eval/             # CER / WER metrics and benchmark runner
+```
+
+## Benchmarks
+
+See [`docs/benchmarks.md`](docs/benchmarks.md) for the full table and the
+reproduction script.
+
+| Engine | Mode | CER ↓ | WER ↓ | Speed (s/page, RTX 4090) |
+| --- | --- | --- | --- | --- |
+| _TBD_ | | | | |
+
+## Roadmap
+
+- [x] Phase 0 — repository, license, docs, CI skeleton
+- [ ] Phase 1 — MVP: Tesseract → deterministic cleaning → valid EPUB 3
+- [ ] Phase 2 — local VLM engines (TeleOCR, PaddleOCR-VL), caching, resume, CER/WER eval
+- [ ] Phase 3 — LiteLLM remote OCR + LLM correction with guardrails and cost control
+- [ ] Phase 4 — FastAPI, SQLite job queue, worker process, SSE progress
+- [ ] Phase 5 — Angular web UI, page-by-page review, integrated reader
+- [ ] Phase 6 — Docker (CPU/GPU), full CI, documentation, v0.1.0 release
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model |
+| [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` |
+| [`docs/configuration.md`](docs/configuration.md) | `config.toml`, environment variables, providers |
+| [`docs/usage.md`](docs/usage.md) | CLI reference and recipes |
+| [`docs/benchmarks.md`](docs/benchmarks.md) | Evaluation methodology and results |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow, commit conventions |
+| [`SECURITY.md`](SECURITY.md) | Reporting vulnerabilities |
+| [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Dependency licenses and rejected copyleft libs |
+
+## Contributing
+
+Contributions are very welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). New OCR engines and correctors are
+especially welcome; the guide shows how in under 50 lines.
+
+## License
+
+[Apache License 2.0](LICENSE) — see also
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

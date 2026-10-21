@@ -1,0 +1,54 @@
+---
+name: New OCR engine or text corrector
+description: Contribute a pluggable adapter for a new engine
+labels: ["ocr", "enhancement", "good first issue"]
+body:
+  - type: input
+    id: engine
+    attributes:
+      label: Engine or provider
+      placeholder: Kraken, Surya, Google Document AI, ...
+    validations:
+      required: true
+
+  - type: input
+    id: license
+    attributes:
+      label: License of the engine or model weights
+      description: Must be permissive (MIT / BSD / Apache-2.0). Copyleft licences cannot be used.
+      placeholder: Apache-2.0
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model repository (if any)
+      placeholder: huggingface.co/org/model
+
+  - type: textarea
+    id: api
+    attributes:
+      label: How is it invoked?
+      description: Python package, CLI binary, HTTP endpoint?
+      placeholder: Python package `kraken` with a `kraken.api` module.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: What does it return?
+      description: Plain text, blocks with bounding boxes, reading order, confidence scores?
+      placeholder: Blocks with bounding boxes and per-block confidence.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: offline
+    attributes:
+      label: Characteristics
+      options:
+        - label: It runs fully offline.
+        - label: It requires model weights downloaded on demand (not vendored in the repo).
+        - label: It does not require a paid API key to be useful.
