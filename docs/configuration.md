@@ -107,16 +107,43 @@ The `*.traineddata` files live in the `tessdata` directory. Point
 The Debian and Ubuntu packages that carry the legacy Spanish data are
 `tesseract-ocr-spa-old`; they are already installed in the container images.
 
-| Language | Code |
-| --- | --- |
-| Spanish (modern) | `spa` |
-| Spanish (before 1900) | `spa_old` |
-| English | `eng` |
-| French | `fra` |
-| German | `deu` |
-| Italian | `ita` |
-| Portuguese | `por` |
-| Latin | `lat` |
+| Language | Code | Tag of the EPUB |
+| --- | --- | --- |
+| Spanish (modern) | `spa` | `es` |
+| Spanish (before 1900) | `spa_old` | `es` |
+| English | `eng` | `en` |
+| French | `fra` | `fr` |
+| German | `deu` | `de` |
+| Italian | `ita` | `it` |
+| Portuguese | `por` | `pt` |
+| Catalan | `cat` | `ca` |
+| Galician | `glg` | `gl` |
+| Basque | `eus` | `eu` |
+| Latin | `lat` | `la` |
+| Greek | `ell` | `el` |
+| Dutch | `nld` | `nl` |
+| Russian | `rus` | `ru` |
+| Ukrainian | `ukr` | `uk` |
+| Polish | `pol` | `pl` |
+| Czech | `ces` | `cs` |
+| Hungarian | `hun` | `hu` |
+| Romanian | `ron` | `ro` |
+| Turkish | `tur` | `tr` |
+| Arabic | `ara` | `ar` |
+| Hebrew | `heb` | `he` |
+| Persian | `fas` | `fa` |
+| Hindi | `hin` | `hi` |
+| Japanese | `jpn` | `ja` |
+| Korean | `kor` | `ko` |
+| Chinese (simplified) | `chi_sim` | `zh` |
+| Chinese (traditional) | `chi_tra` | `zh` |
+| Vietnamese | `vie` | `vi` |
+| Indonesian | `ind` | `id` |
+
+The complete table, with every language that ships with Tesseract, is in
+[`src/scan2epub/domain/languages.py`](../src/scan2epub/domain/languages.py).
+The tag of the EPUB is derived from the OCR language, unless
+`--output-language` says otherwise.
 
 ## The environment variables
 

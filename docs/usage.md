@@ -111,6 +111,16 @@ Each line maps to one of the rules of the cleaner, described in
 | `2` | The command line was wrong. |
 | `130` | The user interrupted the run. |
 
+Every failure ends with a message that says what to do, never with a Python
+traceback:
+
+```
+$ scan2epub convert notas.pdf -o notas.epub
+Error: The file notas.pdf could not be opened as a PDF (Failed to load document
+(PDFium: Data format error).). If it is a scan, make sure that it is a PDF
+and not an image.
+```
+
 ## Reading the result
 
 The generated EPUB is a plain EPUB 3 file. It opens in Calibre, KOReader,
