@@ -234,6 +234,25 @@ Contributions are very welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). New OCR engines and correctors are
 especially welcome; the guide shows how in under 50 lines.
 
+`main` is **protected**: nothing is pushed to it directly. Every change is a
+branch named `feat/…`, `fix/…`, `docs/…` or `chore/…`, opened as a pull
+request, checked by the continuous integration and merged with a squash merge
+that keeps the history linear. The details are in
+[`CONTRIBUTING.md`](CONTRIBUTING.md#the-branching-model).
+
+```bash
+git checkout -b feat/my-engine
+# … your changes …
+git commit -s -m "feat(ocr): add my engine"
+git push -u origin feat/my-engine
+gh pr create --base main --fill
+```
+
+The issues labelled
+[`good first issue`](https://github.com/WassimAarab08/scan2epub/labels/good%20first%20issue)
+are the easiest way to start, and
+[`docs/roadmap.md`](docs/roadmap.md) says what is still missing.
+
 ## License
 
 [Apache License 2.0](LICENSE) — see also

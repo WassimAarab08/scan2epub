@@ -233,9 +233,28 @@ un motor de OCR en menos de cincuenta líneas.
 ## Contribuir
 
 Las contribuciones son muy bienvenidas — mira
-[CONTRIBUTING.md](CONTRIBUTING.md) y [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-Sobre todo, añadir motores de OCR y correctores nuevos; la guía explica cómo
-en menos de 50 líneas.
+[CONTRIBUTING.md](CONTRIBUTING.md) y
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Sobre todo, añadir motores de OCR y
+correctores nuevos; la guía explica cómo en menos de 50 líneas.
+
+`main` está **protegido**: no se empuja nada directamente. Cada cambio es una
+rama llamada `feat/…`, `fix/…`, `docs/…` o `chore/…`, abierta como pull
+request, comprobada por la integración continua y fusionada con un squash que
+mantiene el historial lineal. Los detalles están en
+[`CONTRIBUTING.md`](CONTRIBUTING.md#the-branching-model).
+
+```bash
+git checkout -b feat/mi-motor
+# … tus cambios …
+git commit -s -m "feat(ocr): añado mi motor"
+git push -u origin feat/mi-motor
+gh pr create --base main --fill
+```
+
+Los issues con la etiqueta
+[`good first issue`](https://github.com/WassimAarab08/scan2epub/labels/good%20first%20issue)
+son la forma más fácil de empezar, y
+[`docs/roadmap.md`](docs/roadmap.md) dice lo que falta.
 
 ## Licencia
 
