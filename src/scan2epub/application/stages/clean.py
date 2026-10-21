@@ -103,6 +103,40 @@ def _find_repeated_blocks(
     return repeated, repeated_texts
 
 
+def _footnote_key(text: str) -> str:
+    """Return the comparison key of a footnote.
+
+    Unlike a running head, a footnote is compared verbatim: the number of
+    the note is part of its identity, so two notes with a different number
+    are not the same note.
+    """
+    return " ".join(text.lower().split())
+
+
+def _find_repeated_footnotes(blocks: list[TextBlock], config: CleanConfig) -> set[tuple[int, int]]:
+    """Return the footnotes that are repeated verbatim on many pages.
+
+    A real note belongs to the page it is printed on. The very same note,
+    with the very same number, on three pages or more is boilerplate — a
+    footer that happens to start with a number.
+    """
+    occurrences: dict[str, list[tuple[int, int]]] = {}
+    for block in blocks:
+        if block.kind is not BlockKind.FOOTNOTE:
+            continue
+        key = _footnote_key(block.text)
+        if not key:
+            continue
+        occurrences.setdefault(key, []).append((block.page, block.order))
+
+    repeated: set[tuple[int, int]] = set()
+    for positions in occurrences.values():
+        distinct_pages = {page_index for page_index, _ in positions}
+        if len(distinct_pages) >= config.min_running_head_repeats:
+            repeated.update(positions)
+    return repeated
+
+
 def _join_hyphenated_lines(lines: tuple[str, ...]) -> tuple[tuple[str, ...], int]:
     """Rejoin the words that were split by a hyphen at the end of a line."""
     if not lines:
@@ -269,6 +303,7 @@ def clean_pages(pages: list[PageContent], config: CleanConfig | None = None) -> 
         [PageContent(index=index, blocks=tuple(items)) for index, items in per_page.items()],
         config,
     )
+    repeated_footnotes = _find_repeated_footnotes(blocks, config)
 
     removed_page_numbers = 0
     kept: list[TextBlock] = []
@@ -286,19 +321,28 @@ def clean_pages(pages: list[PageContent], config: CleanConfig | None = None) -> 
             continue
         if not only_block and (block.page, block.order) in repeated:
             continue
+        if not only_block and (block.page, block.order) in repeated_footnotes:
+            # The very same note on many pages is boilerplate, not a note.
+            removed_folio_keys.add(_footnote_key(text))
+            continue
         kept.append(block)
 
     running_heads = tuple(
-        sorted(text for text in repeated_texts if folded(text) not in removed_folio_keys)
+        sorted(
+            text
+            for text in repeated_texts
+            if folded(text) not in removed_folio_keys
+            and _footnote_key(text) not in removed_folio_keys
+        )
     )
 
     # 4. Mark the headings before the paragraphs are built.
     kept = _mark_headings(kept)
 
-    # 4. Gather the lines that belong to the same paragraph.
+    # 5. Gather the lines that belong to the same paragraph.
     kept, merged_paragraphs, hyphen_joins = _merge_into_paragraphs(kept)
 
-    # 5. Repair the words broken at the end of a line.
+    # 6. Repair the words broken at the end of a line.
     joined_hyphens = hyphen_joins
     repaired: list[TextBlock] = []
     for block in kept:
@@ -306,7 +350,7 @@ def clean_pages(pages: list[PageContent], config: CleanConfig | None = None) -> 
         joined_hyphens += joins
         repaired.append(block.with_lines(lines) if joins else block)
 
-    # 6. Redistribute the blocks over the pages.
+    # 7. Redistribute the blocks over the pages.
     grouped: dict[int, list[TextBlock]] = {}
     for block in repaired:
         grouped.setdefault(block.page, []).append(block)
