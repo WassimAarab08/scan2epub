@@ -21,6 +21,8 @@ coverage.xml
 # --- Project runtime data ---
 .cache/
 .scan2epub/
+tmp/
+build/
 *.epub
 !samples/**/*.epub
 *.db
