@@ -78,6 +78,7 @@ dev = [
   "pyright>=1.1.390",
   "respx>=0.22",
   "freezegun>=1.5",
+  "playwright>=1.64.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -156,6 +157,7 @@ addopts = [
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "integration: marks tests that need external binaries or network",
+  "browser: marks tests that drive a real browser through Playwright",
 ]
 filterwarnings = ["error", "ignore::DeprecationWarning"]
 
