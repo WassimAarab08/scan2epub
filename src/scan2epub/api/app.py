@@ -9,7 +9,6 @@ arrive in Phase 4.
 from __future__ import annotations
 
 import os
-import shutil
 import tempfile
 from pathlib import Path
 from typing import Annotated, Any
@@ -28,6 +27,15 @@ __all__ = ["create_app"]
 
 #: The largest PDF the API accepts, in bytes.
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024
+
+#: The content types that are accepted for an upload.
+ACCEPTED_TYPES = frozenset(
+    {
+        "application/pdf",
+        "application/octet-stream",
+        "binary/octet-stream",
+    }
+)
 
 #: The directories where the uploads and the results are written.
 DATA_DIR = Path(os.environ.get("SCAN2EPUB_DATA_DIR", ".scan2epub"))
@@ -126,7 +134,7 @@ document.getElementById('form').addEventListener('submit', async event => {
   const result = document.getElementById('result');
   button.disabled = true;
   result.hidden = false;
-  result.textContent = 'Converting… this can take a while.';
+  result.textContent = 'Converting... this can take a while.';
   const data = new FormData(event.target);
   try {
     const response = await fetch('/api/convert', {method: 'POST', body: data});
@@ -145,6 +153,119 @@ document.getElementById('form').addEventListener('submit', async event => {
 </script>
 </body></html>
 """
+
+
+def _health() -> HealthResponse:
+    """Report that the service is alive."""
+    return HealthResponse(engines=list(available_engines()))
+
+
+def _engines() -> list[EngineInfo]:
+    """List the OCR engines and whether they can be used."""
+    from scan2epub.infrastructure.ocr.tesseract import (  # noqa: PLC0415
+        available_languages,
+        tesseract_version,
+    )
+
+    version = tesseract_version()
+    languages = available_languages()
+    return [
+        EngineInfo(
+            name="tesseract",
+            available=version is not None,
+            details=(
+                f"version {version}, languages: {', '.join(languages)}"
+                if version
+                else "not installed"
+            ),
+        )
+    ]
+
+
+def _store_upload(file: UploadFile, target: Path) -> None:
+    """Write the uploaded file, refusing the ones that are too large."""
+    with target.open("wb") as handle:
+        # The size is checked while the file is written, so an oversized
+        # upload never fills the disk.
+        written = 0
+        while chunk := file.file.read(1024 * 1024):
+            written += len(chunk)
+            if written > MAX_UPLOAD_BYTES:
+                raise HTTPException(status_code=413, detail="The file is too large.")
+            handle.write(chunk)
+    if target.stat().st_size == 0:
+        raise HTTPException(status_code=400, detail="The file is empty.")
+
+
+def _convert(
+    settings: Config,
+    file: UploadFile,
+    title: str | None,
+    author: str | None,
+    year: str | None,
+    language: str | None,
+) -> ConvertResponse:
+    """Convert an uploaded PDF and return the summary of the result."""
+    if file.content_type not in ACCEPTED_TYPES:
+        raise HTTPException(status_code=415, detail="The file must be a PDF.")
+
+    stem = Path(file.filename or "libro").stem[:80]
+    work = Path(tempfile.mkdtemp(prefix="scan2epub-", dir=str(DATA_DIR)))
+    source = work / f"{stem}.pdf"
+    output = work / f"{stem}.epub"
+    _store_upload(file, source)
+
+    try:
+        effective = with_language(settings, language) if language else settings
+        pipeline = build_pipeline(
+            effective,
+            source,
+            work / "work",
+            cache_dir=work / "cache",
+        )
+        metadata = BookMetadata(
+            title=title or stem.replace("_", " ").replace("-", " ").strip() or "Libro",
+            author=author or "",
+            language=effective.general.output_language or effective.general.language or "es",
+            year=year,
+        )
+        result = pipeline.run(metadata, output)
+    except HTTPException:
+        raise
+    except Scan2EpubError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive
+        raise HTTPException(status_code=500, detail=f"The conversion failed: {exc}") from exc
+
+    return ConvertResponse(
+        title=metadata.title,
+        pages=result.page_count,
+        chapters=len(result.book.chapters),
+        size=result.epub_size,
+        duration_seconds=round(result.duration_seconds, 2),
+        removed_running_heads=list(result.clean.removed_running_heads),
+        removed_page_numbers=result.clean.removed_page_numbers,
+        joined_hyphens=result.clean.joined_hyphens,
+        merged_paragraphs=result.clean.merged_paragraphs,
+        footnotes=result.clean.detected_footnotes,
+        epub_valid=result.validation.passed,
+        epub_warnings=list(result.validation.warnings),
+        download=f"/api/download/{work.name}/{output.name}",
+    )
+
+
+def _download(job: str, name: str) -> Response:
+    """Serve a generated EPUB."""
+    if "/" in job or "/" in name or ".." in job or ".." in name:
+        raise HTTPException(status_code=400, detail="Invalid path.")
+    path = (DATA_DIR / job / name).resolve()
+    if not path.is_file() or DATA_DIR.resolve() not in path.parents:
+        raise HTTPException(status_code=404, detail="The file was not found.")
+    return Response(
+        content=path.read_bytes(),
+        media_type="application/epub+zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 def create_app(config: Config | None = None) -> FastAPI:
@@ -173,29 +294,12 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
         """Report that the service is alive."""
-        return HealthResponse(engines=list(available_engines()))
+        return _health()
 
     @app.get("/api/engines", response_model=list[EngineInfo], tags=["system"])
     def engines() -> list[EngineInfo]:
         """List the OCR engines and whether they can be used."""
-        from scan2epub.infrastructure.ocr.tesseract import (  # noqa: PLC0415
-            available_languages,
-            tesseract_version,
-        )
-
-        version = tesseract_version()
-        languages = available_languages()
-        return [
-            EngineInfo(
-                name="tesseract",
-                available=version is not None,
-                details=(
-                    f"version {version}, languages: {', '.join(languages)}"
-                    if version
-                    else "not installed"
-                ),
-            )
-        ]
+        return _engines()
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index() -> HTMLResponse:
@@ -215,77 +319,12 @@ def create_app(config: Config | None = None) -> FastAPI:
         The file is stored under the data directory and the EPUB can be
         downloaded from the link in the answer.
         """
-        if file.content_type not in {
-            "application/pdf",
-            "application/octet-stream",
-            "binary/octet-stream",
-        }:
-            raise HTTPException(status_code=415, detail="The file must be a PDF.")
-
-        stem = Path(file.filename or "libro").stem[:80]
-        work = Path(tempfile.mkdtemp(prefix="scan2epub-", dir=str(DATA_DIR)))
-        source = work / f"{stem}.pdf"
-        output = work / f"{stem}.epub"
-
-        with source.open("wb") as handle:
-            shutil.copyfileobj(file.file, handle, length=1024 * 1024)
-        if source.stat().st_size > MAX_UPLOAD_BYTES:
-            raise HTTPException(status_code=413, detail="The file is too large.")
-        if source.stat().st_size == 0:
-            raise HTTPException(status_code=400, detail="The file is empty.")
-
-        try:
-            effective = with_language(settings, language) if language else settings
-
-            pipeline = build_pipeline(
-                effective,
-                source,
-                work / "work",
-                cache_dir=work / "cache",
-            )
-            metadata = BookMetadata(
-                title=title or stem.replace("_", " ").replace("-", " ").strip() or "Libro",
-                author=author or "",
-                language=effective.general.output_language or effective.general.language or "es",
-                year=year,
-            )
-            result = pipeline.run(metadata, output)
-        except HTTPException:
-            raise
-        except Scan2EpubError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # pragma: no cover - defensive
-            raise HTTPException(status_code=500, detail=f"The conversion failed: {exc}") from exc
-
-        return ConvertResponse(
-            title=metadata.title,
-            pages=result.page_count,
-            chapters=len(result.book.chapters),
-            size=result.epub_size,
-            duration_seconds=round(result.duration_seconds, 2),
-            removed_running_heads=list(result.clean.removed_running_heads),
-            removed_page_numbers=result.clean.removed_page_numbers,
-            joined_hyphens=result.clean.joined_hyphens,
-            merged_paragraphs=result.clean.merged_paragraphs,
-            footnotes=result.clean.detected_footnotes,
-            epub_valid=result.validation.passed,
-            epub_warnings=list(result.validation.warnings),
-            download=f"/api/download/{work.name}/{output.name}",
-        )
+        return _convert(settings, file, title, author, year, language)
 
     @app.get("/api/download/{job}/{name}", tags=["conversion"])
     def download(job: str, name: str) -> Response:
         """Serve a generated EPUB."""
-        if "/" in job or "/" in name or ".." in job or ".." in name:
-            raise HTTPException(status_code=400, detail="Invalid path.")
-        path = (DATA_DIR / job / name).resolve()
-        if not path.is_file() or DATA_DIR.resolve() not in path.parents:
-            raise HTTPException(status_code=404, detail="The file was not found.")
-        return Response(
-            content=path.read_bytes(),
-            media_type="application/epub+zip",
-            headers={"Content-Disposition": f'attachment; filename="{name}"'},
-        )
+        return _download(job, name)
 
     @app.exception_handler(Scan2EpubError)
     def handle_scan2epub_error(

@@ -20,6 +20,9 @@ __all__ = ["ValidationReport", "find_epubcheck", "validate_epub"]
 #: Environment variable pointing at the ``epubcheck.jar`` file.
 ENV_JAR = "SCAN2EPUB_EPUBCHECK_JAR"
 
+#: The versions of EPUBCheck that were already read.
+_VERSION_CACHE: dict[str, str | None] = {}
+
 _ERROR_RE = re.compile(r"^(?:ERROR|FATAL)(?:\([A-Z0-9-]+\))?:\s*(.+)$", re.IGNORECASE)
 _WARNING_RE = re.compile(r"^(?:WARNING|WARN)(?:\([A-Z0-9-]+\))?:\s*(.+)$", re.IGNORECASE)
 _VERSION_RE = re.compile(r"EPUBCheck\s+v?(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -157,7 +160,14 @@ def _build_command(epubcheck: Path, path: Path) -> list[str]:
 
 
 def _tool_version(epubcheck: Path, timeout: int = 60) -> str | None:
-    """Return the version of the EPUBCheck installation, if it can be read."""
+    """Return the version of the EPUBCheck installation, if it can be read.
+
+    The answer is cached: starting a virtual machine for every validation
+    would double the time of a conversion.
+    """
+    key = str(epubcheck)
+    if key in _VERSION_CACHE:
+        return _VERSION_CACHE[key]
     if epubcheck.suffix == ".jar":
         command = [
             "java",
@@ -180,4 +190,6 @@ def _tool_version(epubcheck: Path, timeout: int = 60) -> str | None:
     except (OSError, subprocess.SubprocessError):  # pragma: no cover - environment
         return None
     match = _VERSION_RE.search(f"{completed.stdout}\n{completed.stderr}")
-    return match.group(1) if match else None
+    version = match.group(1) if match else None
+    _VERSION_CACHE[key] = version
+    return version
