@@ -1,0 +1,80 @@
+# The CPU image of scan2epub.
+#
+# It carries the CLI, the REST API and the Tesseract engine. The vision
+# language models need a GPU: use the `gpu` profile for them.
+#
+#   docker build -f docker/Dockerfile.cpu -t ghcr.io/wassimaarab08/scan2epub:cpu .
+
+FROM python:3.12-slim-bookworm AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never
+
+WORKDIR /app
+
+# The dependencies are installed first so that the layer is reused.
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --no-install-project --extra api --extra eval
+
+COPY src/ ./src/
+RUN uv sync --extra api --extra eval
+
+
+FROM python:3.12-slim-bookworm AS runtime
+
+LABEL org.opencontainers.image.title="scan2epub" \
+      org.opencontainers.image.description="Turn scanned public-domain books into clean, reflowable EPUB 3" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://github.com/WassimAarab08/scan2epub"
+
+# Tesseract is the default OCR engine; the language data of Spanish (both the
+# modern and the legacy one) and of English come with it.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-spa \
+        tesseract-ocr-eng \
+        tesseract-ocr-fra \
+        tesseract-ocr-deu \
+        libgl1 \
+        libglib2.0-0 \
+        default-jre-headless \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# EPUBCheck validates the generated books.
+ARG EPUBCHECK_VERSION=5.4.0
+RUN curl -sSL -o /tmp/epubcheck.zip \
+        "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip" \
+    && unzip -q /tmp/epubcheck.zip -d /opt \
+    && rm /tmp/epubcheck.zip \
+    && ln -s /opt/epubcheck-${EPUBCHECK_VERSION}/epubcheck.jar /usr/local/share/epubcheck.jar
+
+ENV SCAN2EPUB_EPUBCHECK_JAR=/usr/local/share/epubcheck.jar \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+
+COPY --from=builder /app /app
+
+RUN useradd --create-home --uid 1000 scan2epub \
+    && mkdir -p /data/cache /data/work \
+    && chown -R scan2epub:scan2epub /data /app
+USER scan2epub
+
+WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH" \
+    SCAN2EPUB_CACHE_DIR=/data/cache \
+    SCAN2EPUB_WORK_DIR=/data/work
+
+VOLUME ["/data"]
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
+
+ENTRYPOINT ["scan2epub"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8000"]

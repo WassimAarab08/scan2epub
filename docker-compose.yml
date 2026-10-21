@@ -1,0 +1,84 @@
+# scan2epub — one command and you are done.
+#
+#   docker compose up                     # the CPU profile
+#   docker compose --profile gpu up       # with the vision language models
+#   docker compose --profile ollama up    # with a local LLM for the correction
+#
+# Then open http://localhost:8000 and drop a PDF in.
+
+name: scan2epub
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    image: ghcr.io/wassimaarab08/scan2epub:cpu
+    profiles: ["cpu", "gpu"]
+    ports:
+      - "8000:8000"
+    environment:
+      SCAN2EPUB_LOG_LEVEL: "INFO"
+      SCAN2EPUB_CACHE_DIR: /data/cache
+      SCAN2EPUB_WORK_DIR: /data/work
+      # The API keys of the remote engines, if they are used. Leave them
+      # unset to stay completely offline.
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - scan2epub-data:/data
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/wassimaarab08/scan2epub:cpu
+    profiles: ["cpu", "gpu"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    command: ["worker"]
+    environment:
+      SCAN2EPUB_LOG_LEVEL: "INFO"
+      SCAN2EPUB_CACHE_DIR: /data/cache
+      SCAN2EPUB_WORK_DIR: /data/work
+      SCAN2EPUB_DATABASE: /data/jobs.db
+    volumes:
+      - scan2epub-data:/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api-gpu:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    image: ghcr.io/wassimaarab08/scan2epub:gpu
+    profiles: ["gpu"]
+    ports:
+      - "8000:8000"
+    environment:
+      SCAN2EPUB_LOG_LEVEL: "INFO"
+      SCAN2EPUB_CACHE_DIR: /data/cache
+      SCAN2EPUB_WORK_DIR: /data/work
+      HF_HOME: /data/models
+    volumes:
+      - scan2epub-data:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama", "gpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  scan2epub-data:
+  ollama-data:

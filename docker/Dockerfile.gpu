@@ -1,0 +1,91 @@
+# The GPU image of scan2epub.
+#
+# It carries the vision language engines (TeleOCR, PaddleOCR-VL) and vLLM.
+# It needs the NVIDIA Container Toolkit on the host.
+#
+#   docker build -f docker/Dockerfile.gpu -t ghcr.io/wassimaarab08/scan2epub:gpu .
+
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3.12 \
+        python3.12-venv \
+        python3-pip \
+        curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --no-install-project --extra api --extra eval --extra vlm
+
+COPY src/ ./src/
+RUN uv sync --extra api --extra eval --extra vlm
+
+
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS runtime
+
+LABEL org.opencontainers.image.title="scan2epub" \
+      org.opencontainers.image.description="Turn scanned public-domain books into clean, reflowable EPUB 3" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://github.com/WassimAarab08/scan2epub"
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG EPUBCHECK_VERSION=5.4.0
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3.12 \
+        python3.12-venv \
+        tesseract-ocr \
+        tesseract-ocr-spa \
+        tesseract-ocr-eng \
+        libgl1 \
+        libglib2.0-0 \
+        default-jre-headless \
+        curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python \
+    && curl -sSL -o /tmp/epubcheck.zip \
+        "https://github.com/w3c/epubcheck/releases/download/v${EPUBCHECK_VERSION}/epubcheck-${EPUBCHECK_VERSION}.zip" \
+    && unzip -q /tmp/epubcheck.zip -d /opt \
+    && rm /tmp/epubcheck.zip \
+    && ln -s /opt/epubcheck-${EPUBCHECK_VERSION}/epubcheck.jar /usr/local/share/epubcheck.jar
+
+ENV SCAN2EPUB_EPUBCHECK_JAR=/usr/local/share/epubcheck.jar \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
+    HF_HOME=/data/models \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+COPY --from=builder /app /app
+
+RUN useradd --create-home --uid 1000 scan2epub \
+    && mkdir -p /data/cache /data/work /data/models \
+    && chown -R scan2epub:scan2epub /data /app
+USER scan2epub
+
+WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH" \
+    SCAN2EPUB_CACHE_DIR=/data/cache \
+    SCAN2EPUB_WORK_DIR=/data/work
+
+VOLUME ["/data"]
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
+
+ENTRYPOINT ["scan2epub"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8000"]
