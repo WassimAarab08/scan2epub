@@ -1,0 +1,186 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scan2epub"
+version = "0.1.0"
+description = "Turn scanned public-domain books into clean, reflowable EPUB 3 with pluggable AI OCR and LLM post-correction."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "The scan2epub contributors" }]
+keywords = ["ocr", "epub", "epub3", "digital-humanities", "book-scanning", "tesseract"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Text Processing :: Markup :: XML",
+]
+dependencies = [
+  "pypdfium2>=5.14",
+  "opencv-python-headless>=4.10",
+  "numpy>=2.0",
+  "pillow>=11.0",
+  "pytesseract>=0.3.13",
+  "pydantic>=2.10",
+  "pydantic-settings>=2.6",
+  "typer>=0.12",
+  "rich>=13.7",
+  "structlog>=24.1",
+  "tomli-w>=1.1",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "python-multipart>=0.0.12",
+  "httpx>=0.27",
+]
+llm = ["litellm>=1.60"]
+vlm = [
+  "transformers>=5.0",
+  "torch>=2.6",
+  "accelerate>=1.0",
+  "sentencepiece>=0.2",
+]
+gpu = ["vllm>=0.8; sys_platform == 'linux'"]
+eval = ["jiwer>=4.0"]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+  "pyright>=1.1.390",
+  "respx>=0.22",
+  "freezegun>=1.5",
+]
+
+[project.scripts]
+scan2epub = "scan2epub.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/WassimAarab08/scan2epub"
+Repository = "https://github.com/WassimAarab08/scan2epub"
+Issues = "https://github.com/WassimAarab08/scan2epub/issues"
+Changelog = "https://github.com/WassimAarab08/scan2epub/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+  "pyright>=1.1.390",
+  "respx>=0.22",
+  "freezegun>=1.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scan2epub"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/scan2epub", "docs", "samples", "tests", "README.md", "README.es.md"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["web"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "B",   # bugbear
+  "C4",  # comprehensions
+  "SIM", # simplify
+  "RET", # return
+  "PTH", # use pathlib
+  "RUF", # ruff-specific
+  "S",   # bandit
+  "ANN", # annotations
+  "ASYNC",
+  "TID",
+  "ARG", # unused arguments
+  "PL",  # pylint
+  "TRY", # tryceratops
+  "D",   # pydocstyle
+]
+ignore = [
+  "D203",  # incompatible with D211
+  "D213",  # incompatible with D212
+  "PLR0913", # too many arguments
+  "PLR0917", # the CLI commands legitimately have many options
+  "PLR2004", # numeric thresholds read better inline
+  "TRY003",  # long messages outside exception class
+  "RUF001",  # the long s and the other ambiguous characters are the point
+  "RUF002",
+  "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "S101", "S106", "S311", "D103", "D104", "D401", "PLR2004", "ARG", "ANN401", "ANN001", "ANN201", "ANN202", "SLF001", "PLC0415",
+]
+"scripts/**" = ["S101", "T201", "INP001"]
+"**/__init__.py" = ["D104"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests that need external binaries or network",
+]
+filterwarnings = ["error", "ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["src/scan2epub"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+  "\\.\\.\\.",
+]
+
+[tool.pyright]
+include = ["src/scan2epub"]
+exclude = ["**/__pycache__", "web"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnnecessaryTypeIgnoreComment = "error"
+reportPrivateUsage = false
+reportUnusedCallResult = false
