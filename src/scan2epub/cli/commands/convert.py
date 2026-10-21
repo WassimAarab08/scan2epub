@@ -11,13 +11,13 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 
 from scan2epub.application.cache import FileCache
+from scan2epub.application.factory import build_ocr_engine, with_language
 from scan2epub.application.pipeline import Pipeline, PipelineResult
 from scan2epub.application.progress import ProgressEvent
 from scan2epub.config import Config, GeneralConfig, load_config, output_language_for
 from scan2epub.domain.models import BookMetadata
 from scan2epub.errors import ConfigurationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
-from scan2epub.infrastructure.ocr.tesseract import TesseractOcrEngine
 from scan2epub.infrastructure.pdf.pdfium_source import PdfiumPageSource
 from scan2epub.logging import get_logger
 
@@ -174,16 +174,12 @@ def convert(
 
     engine_config = config.ocr_provider("tesseract")
     options = engine_config.options
-    tessdata = options.get("tessdata_dir")
     # The command line wins over the provider section, which wins over the
     # general configuration.
     ocr_language = language or str(options.get("lang", config.general.language))
-    engine = TesseractOcrEngine(
-        lang=ocr_language,
-        oem=int(options.get("oem", 1)),
-        psm=int(options.get("psm", 3)),
-        tessdata_dir=Path(tessdata) if tessdata else None,
-    )
+    if ocr_language != config.general.language:
+        config = with_language(config, ocr_language)
+    engine = build_ocr_engine(config)
     metadata = _build_metadata(source, config.general, title, author, year, ocr_language)
 
     cache = None if no_cache else FileCache(cache_root)

@@ -58,10 +58,11 @@ def main() -> None:
 
 def _register_commands() -> None:
     """Import and register every command module."""
-    from scan2epub.cli.commands import convert, doctor  # noqa: PLC0415
+    from scan2epub.cli.commands import convert, doctor, serve  # noqa: PLC0415
 
     app.command(name="convert")(convert.convert)
     app.command(name="doctor")(doctor.doctor)
+    app.command(name="serve")(serve.serve)
 
 
 _register_commands()
