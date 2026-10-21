@@ -32,7 +32,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install the project
-        run: uv sync --all-extras --locked
+        run: uv sync --extra api --extra eval --locked
 
       - name: Check the formatting
         run: uv run ruff format --check .
@@ -123,7 +123,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install the project
-        run: uv sync --all-extras --locked
+        run: uv sync --extra api --extra eval --locked
 
       - name: Install Tesseract
         run: |

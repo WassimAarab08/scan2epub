@@ -126,7 +126,7 @@ flowchart LR
     WEB[Web UI<br/>Angular]
   end
   subgraph Application
-    PIPE[Pipeline<br/>9 cached stages]
+    PIPE[Pipeline<br/>cached stages]
   end
   subgraph Domain
     PORTS[Ports<br/>OcrEngine · TextCorrector]

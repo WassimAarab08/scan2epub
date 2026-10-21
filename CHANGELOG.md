@@ -7,9 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The cache no longer mixes languages.** The key of a cached recognition
+  result now covers the settings of the engine, so a book recognised in
+  English is never served again when the language changes.
+- **`--lang` is no longer ignored.** The language of the command line now
+  wins over the `[ocr.tesseract] lang` of the configuration file, and the
+  provider section follows it.
+- **The options of a provider are read.** The keys of a provider section
+  (`[ocr.tesseract] lang = "spa"`) are now honoured; before, only the
+  `[ocr.tesseract.options]` sub-table was taken into account, so the
+  documented format was silently ignored.
+- **The footnotes no longer share an identifier.** Two notes with the same
+  number on different pages produced duplicate XML identifiers, which is
+  invalid. The identifier is now the position of the note in the chapter, and
+  a note that cannot be referenced keeps its number.
+- **"Book" and "Part" are not headings any more.** A sentence such as "Book
+  the tickets" turned a whole paragraph into a chapter. A structural keyword
+  must now be followed by a number or by a capitalised word.
+- **A word that ends with a letter is not a conjunction.** "The company" was
+  treated as if it ended with the conjunction "y", so unrelated paragraphs
+  were merged.
+- The size of an uploaded PDF is now checked while it is written, instead of
+  after the whole file reached the disk.
+- The `<dc:creator>` of the package document no longer carries stray
+  whitespace around the name.
+
 ### Added
-- Initial project scaffolding: repository layout, Apache-2.0 license, contribution
-  guidelines, code of conduct, security policy and issue/PR templates.
+- `scan2epub config`: writes a documented `config.toml` template, shows the
+  configuration in use and reports where the file is.
+- `scan2epub convert --strict`: fails when the generated EPUB does not pass
+  the EPUBCheck validation.
+- A configuration file with a byte order mark is read correctly.
+- The version of EPUBCheck is cached, so a conversion starts the virtual
+  machine only once.
+- 237 tests, 89 % of coverage, including a regression test for every bug
+  above.
 
 ## [0.1.0] - Unreleased
 

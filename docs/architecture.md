@@ -13,7 +13,7 @@ flowchart TB
   end
 
   subgraph APP["Application"]
-    PIPE["Pipeline<br/>nine cached stages"]
+    PIPE["Pipeline<br/>cached stages"]
     JOBS["JobManager<br/><i>Phase 4</i>"]
     COST["CostGuard<br/><i>Phase 3</i>"]
   end
@@ -105,22 +105,30 @@ the line breaks are still known: `im-` + `prenta` is `imprenta`, but
 a block that comes from a vision model can be compared, because both are
 expressed as fractions of the page.
 
-## The nine stages
+## The stages
 
-| # | Stage | Input → output | Model |
-| --- | --- | --- | --- |
-| 1 | `ingest` | PDF → `list[PageImage]` at 300 dpi, blank pages detected | deterministic |
-| 2 | `preprocess` | `PageImage` → `PageImage`: deskew, frame removal, denoise, binarisation | deterministic |
-| 3 | `layout` | `PageImage` → `PageLayout`: blocks, columns, footnotes, figures | heuristic (+ optional VLM) |
-| 4 | `ocr` | `PageImage` → `list[TextBlock]` | **model** (`OcrEngine`) |
-| 5 | `clean` | pages → cleaned pages | deterministic, no model |
-| 6 | `correct` | pages → corrected pages | **model** (`TextCorrector`), optional |
-| 7 | `structure` | pages → `Book`: chapters, table of contents, figures, notes | heuristic |
-| 8 | `epub` | `Book` → EPUB 3 bytes | deterministic |
-| 9 | `validate` | EPUB → report | deterministic (EPUBCheck) |
+| # | Stage | Input → output | Model | Phase |
+| --- | --- | --- | --- | --- |
+| 1 | `ingest` | PDF → `list[PageImage]` at 300 dpi, blank pages detected | deterministic | 1 |
+| 2 | `preprocess` | `PageImage` → `PageImage`: deskew, frame removal, denoise, binarisation | deterministic | 1 |
+| 3 | `ocr` | `PageImage` → `list[TextBlock]` | **model** (`OcrEngine`) | 1 |
+| 4 | `clean` | pages → cleaned pages | deterministic, no model | 1 |
+| 5 | `correct` | pages → corrected pages | **model** (`TextCorrector`), optional | 3 |
+| 6 | `structure` | pages → `Book`: chapters, table of contents, figures, notes | heuristic | 1 |
+| 7 | `epub` | `Book` → EPUB 3 bytes | deterministic | 1 |
+| 8 | `validate` | EPUB → report | deterministic (EPUBCheck) | 1 |
+| — | `layout` | `PageImage` → `PageLayout`: blocks, columns, footnotes, figures | heuristic (+ optional VLM) | **2** |
 
-Stage 5 is the one that makes the tool useful without any model. It is the
+Stage 4 is the one that makes the tool useful without any model. It is the
 difference between "an OCR dump" and "a book".
+
+**On the layout stage.** The `PageLayout` model and the `LayoutAnalyzer` port
+exist from the start, but the analyser itself lands in Phase 2. Until then the
+layout is inferred from the geometry that the OCR engine returns: the blocks
+come with their bounding boxes, and the cleaner and the structuring stage work
+from those. The `layout` stage will add the explicit detection of columns,
+figures and footnote zones, and it will be able to ask a vision model for the
+regions of a page.
 
 ### What the cleaner does
 

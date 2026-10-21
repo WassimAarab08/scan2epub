@@ -24,15 +24,10 @@ weights are tracked separately, at the bottom of this file.
 | [pillow](https://github.com/python-pillow/Pillow) | >=11.0 | MIT-CMU | Image I/O |
 | [pytesseract](https://github.com/mhammond/pytesseract) | >=0.3.13 | Apache-2.0 | Tesseract OCR bindings |
 | [pydantic](https://github.com/pydantic/pydantic) | >=2.10 | MIT | Data models / settings |
-| [pydantic-settings](https://github.com/pydantic/pydantic-settings) | >=2.6 | MIT | Environment-variable configuration |
-| [fastapi](https://github.com/fastapi/fastapi) | >=0.115 | MIT | REST API |
-| [uvicorn](https://github.com/encode/uvicorn) | >=0.32 | BSD-3-Clause | ASGI server |
 | [typer](https://github.com/fastapi/typer) | >=0.12 | MIT | CLI |
 | [rich](https://github.com/Textualize/rich) | >=13.7 | MIT | Terminal progress bars / reports |
 | [structlog](https://github.com/hynek/structlog) | >=24.1 | MIT | Structured logging |
 | [httpx](https://github.com/encode/httpx) | >=0.27 | BSD-3-Clause | HTTP client (SSE, remote APIs) |
-| [tenacity](https://github.com/jd/tenacity) | >=9.0 | Apache-2.0 | Retries with exponential backoff |
-| [tomli-w](https://github.com/scientific-python/tomli-w) | >=1.1 | MIT | Writing `config.toml` |
 | [certifi](https://github.com/certifi/python-certifi) | >=2024.2 | **MPL-2.0** | Root certificates, pulled in by `httpx` |
 
 > **Note on `certifi`.** MPL-2.0 is a *file-level* copyleft licence: it does
@@ -50,6 +45,7 @@ weights are tracked separately, at the bottom of this file.
 | [sentencepiece](https://github.com/google/sentencepiece) | `vlm` | >=0.2 | Apache-2.0 | PaddleOCR-VL tokenizer |
 | [vllm](https://github.com/vllm-project/vllm) | `gpu` | >=0.8 | Apache-2.0 | High-throughput VLM serving |
 | [jiwer](https://github.com/jitsi/jiwer) | `eval` | >=4.0 | MIT | CER / WER metrics |
+| [tenacity](https://github.com/jd/tenacity) | `llm` | >=9.0 | Apache-2.0 | Retries with exponential backoff |
 
 ## Development dependencies
 

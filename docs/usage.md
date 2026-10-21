@@ -22,6 +22,7 @@ scan2epub convert libro.pdf -o libro.epub
 | `--cache-dir` | `<work-dir>/cache` | Where the artefacts are cached. |
 | `--no-cache` | off | Disable the cache. |
 | `--no-validate` | off | Skip the EPUBCheck validation. |
+| `--strict` | off | Fail when the generated EPUB does not pass EPUBCheck. |
 | `--config` | the user configuration | The `config.toml` file. |
 | `--json` | off | Print the summary as JSON. |
 
@@ -158,6 +159,19 @@ pipeline = Pipeline(
 result = pipeline.run(BookMetadata(title="Mi libro"), Path("libro.epub"))
 print(result.validation.passed, result.page_count)
 ```
+
+## `scan2epub config`
+
+Write or inspect the configuration file.
+
+```bash
+scan2epub config --init          # write a documented template
+scan2epub config --show          # print the configuration in use
+scan2epub config                 # say where the file is
+```
+
+The template that `--init` writes is a fully commented `config.toml`; every
+section of it is described in [`configuration.md`](configuration.md).
 
 ## `scan2epub serve`
 

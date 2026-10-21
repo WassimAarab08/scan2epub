@@ -1274,18 +1274,6 @@ wheels = [
 ]
 
 [[package]]
-name = "freezegun"
-version = "1.5.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "python-dateutil" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/95/dd/23e2f4e357f8fd3bdff613c1fe4466d21bfb00a6177f238079b17f7b1c84/freezegun-1.5.5.tar.gz", hash = "sha256:ac7742a6cc6c25a2c35e9292dfd554b897b517d2dec26891a2e8debf205cb94a", size = 35914, upload-time = "2025-08-09T10:39:08.338Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/2e/b41d8a1a917d6581fc27a35d05561037b048e47df50f27f8ac9c7e27a710/freezegun-1.5.5-py3-none-any.whl", hash = "sha256:cd557f4a75cf074e84bc374249b9dd491eaeacd61376b9eb3c423282211619d2", size = 19266, upload-time = "2025-08-09T10:39:06.636Z" },
-]
-
-[[package]]
 name = "frozenlist"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4495,18 +4483,6 @@ wheels = [
 ]
 
 [[package]]
-name = "respx"
-version = "0.23.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/43/98/4e55c9c486404ec12373708d015ebce157966965a5ebe7f28ff2c784d41b/respx-0.23.1.tar.gz", hash = "sha256:242dcc6ce6b5b9bf621f5870c82a63997e8e82bc7c947f9ffe272b8f3dd5a780", size = 29243, upload-time = "2026-04-08T14:37:16.008Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/4a/221da6ca167db45693d8d26c7dc79ccfc978a440251bf6721c9aaf251ac0/respx-0.23.1-py2.py3-none-any.whl", hash = "sha256:b18004b029935384bccfa6d7d9d74b4ec9af73a081cc28600fffc0447f4b8c1a", size = 25557, upload-time = "2026-04-08T14:37:14.613Z" },
-]
-
-[[package]]
 name = "rich"
 version = "15.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4786,12 +4762,10 @@ dependencies = [
     { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "pydantic" },
-    { name = "pydantic-settings" },
     { name = "pypdfium2" },
     { name = "pytesseract" },
     { name = "rich" },
     { name = "structlog" },
-    { name = "tomli-w" },
     { name = "typer" },
 ]
 
@@ -4803,12 +4777,10 @@ api = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 dev = [
-    { name = "freezegun" },
     { name = "httpx2" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "respx" },
     { name = "ruff" },
 ]
 eval = [
@@ -4819,6 +4791,7 @@ gpu = [
 ]
 llm = [
     { name = "litellm" },
+    { name = "tenacity" },
 ]
 vlm = [
     { name = "accelerate" },
@@ -4829,13 +4802,11 @@ vlm = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "freezegun" },
     { name = "httpx2" },
     { name = "playwright" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "respx" },
     { name = "ruff" },
 ]
 
@@ -4843,7 +4814,6 @@ dev = [
 requires-dist = [
     { name = "accelerate", marker = "extra == 'vlm'", specifier = ">=1.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115" },
-    { name = "freezegun", marker = "extra == 'dev'", specifier = ">=1.5" },
     { name = "httpx", marker = "extra == 'api'", specifier = ">=0.27" },
     { name = "httpx2", marker = "extra == 'dev'", specifier = ">=2.16" },
     { name = "jiwer", marker = "extra == 'eval'", specifier = ">=4.0" },
@@ -4852,19 +4822,17 @@ requires-dist = [
     { name = "opencv-python-headless", specifier = ">=4.10" },
     { name = "pillow", specifier = ">=11.0" },
     { name = "pydantic", specifier = ">=2.10" },
-    { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "pypdfium2", specifier = ">=5.14" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.390" },
     { name = "pytesseract", specifier = ">=0.3.13" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.12" },
-    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.22" },
     { name = "rich", specifier = ">=13.7" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "sentencepiece", marker = "extra == 'vlm'", specifier = ">=0.2" },
     { name = "structlog", specifier = ">=24.1" },
-    { name = "tomli-w", specifier = ">=1.1" },
+    { name = "tenacity", marker = "extra == 'llm'", specifier = ">=9.0" },
     { name = "torch", marker = "extra == 'vlm'", specifier = ">=2.6" },
     { name = "transformers", marker = "extra == 'vlm'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
@@ -4875,13 +4843,11 @@ provides-extras = ["api", "llm", "vlm", "gpu", "eval", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "freezegun", specifier = ">=1.5" },
     { name = "httpx2", specifier = ">=2.16" },
     { name = "playwright", specifier = ">=1.64.0" },
     { name = "pyright", specifier = ">=1.1.390" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=6.0" },
-    { name = "respx", specifier = ">=0.22" },
     { name = "ruff", specifier = ">=0.8" },
 ]
 
@@ -5099,6 +5065,15 @@ wheels = [
 ]
 
 [[package]]
+name = "tenacity"
+version = "9.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/9e/497c1c8ebe5a5b5d1d4a7511aea22c0bb1a97e3170d98abdef0e1b34265a/tenacity-9.2.1.tar.gz", hash = "sha256:a606b5c808d0cded4a359d5b9932d867ff2a6a6b64d37350260fd01bbdf83839", size = 58261, upload-time = "2026-10-07T12:13:01.633Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/26/1ff2b0721ac66a3ec5b1402b333110b352ab0a8724052ac279a7b82d40c4/tenacity-9.2.1-py3-none-any.whl", hash = "sha256:9e56f17539296baab7beabb08b92f6ee3d7be92d8be72d763360677c2ad6580e", size = 32310, upload-time = "2026-10-07T12:13:00.102Z" },
+]
+
+[[package]]
 name = "tiktoken"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5230,15 +5205,6 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/e3/b5a3fc7df1c9996c4423deef5e3bad912c27be09922ad9fcb902ab960fc9/tokenspeed_triton-3.9.10.post20261008-cp312-abi3-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e6bd2c4b25f6976f1e22e33e5e1c8b04ede6db6aa6c50722b8a30097ec2782ad", size = 88581214, upload-time = "2026-10-09T23:23:05.448Z" },
     { url = "https://files.pythonhosted.org/packages/1c/79/ffd666bee268dc27ee34ed471e43f0357f9154c93d5180381861f8673c21/tokenspeed_triton-3.9.10.post20261008-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5cb864b8a55f3b0b6d95dca81af85abd702496265971d8c44366eb68c8851154", size = 93285278, upload-time = "2026-10-09T23:23:09.368Z" },
-]
-
-[[package]]
-name = "tomli-w"
-version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/19/75/241269d1da26b624c0d5e110e8149093c759b7a286138f4efd61a60e75fe/tomli_w-1.2.0.tar.gz", hash = "sha256:2dd14fac5a47c27be9cd4c976af5a12d87fb1f0b4512f81d69cce3b35ae25021", size = 7184, upload-time = "2025-01-15T12:07:24.262Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/18/c86eb8e0202e32dd3df50d43d7ff9854f8e0603945ff398974c1d91ac1ef/tomli_w-1.2.0-py3-none-any.whl", hash = "sha256:188306098d013b691fcadc011abd66727d3c414c571bb01b1a174ba8c983cf90", size = 6675, upload-time = "2025-01-15T12:07:22.074Z" },
 ]
 
 [[package]]
