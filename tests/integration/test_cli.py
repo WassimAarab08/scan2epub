@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 from scan2epub.application.stages.validate import find_epubcheck
 from scan2epub.cli.main import app
 from scan2epub.infrastructure.ocr.tesseract import tesseract_version
+from tests.support import strip_ansi
 
 runner = CliRunner()
 
@@ -43,7 +44,7 @@ def test_doctor_can_print_json() -> None:
     """``doctor --json`` produces machine readable output."""
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 0
-    payload = json.loads(result.output)
+    payload = json.loads(strip_ansi(result.output))
     assert "tesseract" in payload
     assert "api_keys_present" in payload
 
@@ -54,7 +55,7 @@ def test_doctor_never_prints_the_api_keys(monkeypatch: pytest.MonkeyPatch) -> No
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 0
     assert "sk-supersecretvalue1234567890" not in result.output
-    assert json.loads(result.output)["api_keys_present"]["OPENAI_API_KEY"] is True
+    assert json.loads(strip_ansi(result.output))["api_keys_present"]["OPENAI_API_KEY"] is True
 
 
 def test_a_missing_input_is_reported(sample_pdf: Path) -> None:

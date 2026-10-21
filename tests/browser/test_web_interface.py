@@ -108,7 +108,6 @@ def test_a_book_is_converted_through_the_form(
     result = page.inner_text("#result")  # type: ignore[attr-defined]
     assert "El libro de prueba" in result
     assert "3 pages" in result
-
     # The download link really serves an EPUB.
     href = page.get_attribute("#result a", "href")  # type: ignore[attr-defined]
     assert href

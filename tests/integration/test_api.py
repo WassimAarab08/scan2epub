@@ -27,7 +27,7 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def client(data_dir: Path) -> TestClient:
+def client(data_dir: Path, require_tesseract: None) -> TestClient:
     """Return a test client of the API."""
     config = Config(general=GeneralConfig(language="eng", validate_epub=False))
     return TestClient(create_app(config))

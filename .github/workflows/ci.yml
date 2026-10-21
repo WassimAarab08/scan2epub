@@ -13,7 +13,6 @@ concurrency:
 env:
   UV_VERSION: "0.13.4"
   PYTHON_VERSION: "3.12"
-  FORCE_COLOR: "1"
 
 jobs:
   quality:
@@ -33,6 +32,13 @@ jobs:
 
       - name: Install the project
         run: uv sync --extra api --extra eval --locked
+
+      - name: Install Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-spa tesseract-ocr-spa-old tesseract-ocr-eng
+          tesseract --list-langs
 
       - name: Check the formatting
         run: uv run ruff format --check .
