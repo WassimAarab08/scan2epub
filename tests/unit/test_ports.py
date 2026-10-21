@@ -36,6 +36,10 @@ class _Engine:
         """Return a single block."""
         return [TextBlock.from_text("hola", BBox(0.1, 0.1, 0.9, 0.2), page=image.index)]
 
+    def describe(self) -> dict[str, object]:
+        """Return the settings that change the result."""
+        return {"engine": self.name, "lang": "demo"}
+
 
 class _Corrector:
     """A minimal text corrector."""

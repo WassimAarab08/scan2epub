@@ -36,9 +36,13 @@ def _block(
 
 
 def test_a_structural_keyword_makes_a_level_one_heading() -> None:
-    """``CAPITULO`` introduces a chapter."""
+    """``CAPITULO`` introduces a chapter.
+
+    The keyword must be followed by a number or by a capitalised word: a
+    lower-case word after it means an ordinary sentence.
+    """
     assert classify_heading(_block("CAPITULO PRIMERO")) == 1
-    assert classify_heading(_block("Libro segundo")) == 1
+    assert classify_heading(_block("Libro Segundo")) == 1
     assert classify_heading(_block("Chapter IV")) == 1
 
 

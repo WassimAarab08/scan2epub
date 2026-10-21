@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from scan2epub.application.stages.validate import find_epubcheck
 from scan2epub.cli.main import app
 from scan2epub.infrastructure.ocr.tesseract import tesseract_version
 
@@ -110,3 +111,34 @@ def test_the_conversion_can_print_json(sample_pdf: Path, tmp_path: Path) -> None
     payload = json.loads(result.output)
     assert payload["pages"] == 3
     assert payload["removed_running_heads"]
+
+
+def test_the_strict_flag_accepts_a_valid_book(sample_pdf: Path, tmp_path: Path) -> None:
+    """``--strict`` does not complain about a book that passes EPUBCheck."""
+    if tesseract_version() is None:
+        pytest.skip("Tesseract is not installed")
+    if find_epubcheck() is None:
+        pytest.skip("EPUBCheck is not installed")
+    result = runner.invoke(
+        app,
+        [
+            "convert",
+            str(sample_pdf),
+            "-o",
+            str(tmp_path / "book.epub"),
+            "--lang",
+            "eng",
+            "--work-dir",
+            str(tmp_path / "work"),
+            "--strict",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_the_config_command_writes_a_template(tmp_path: Path) -> None:
+    """``config --init`` writes a file that can be read back."""
+    target = tmp_path / "config.toml"
+    result = runner.invoke(app, ["config", "--init", "--path", str(target)])
+    assert result.exit_code == 0
+    assert target.is_file()
