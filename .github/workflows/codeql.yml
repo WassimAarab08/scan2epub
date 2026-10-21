@@ -31,12 +31,12 @@ jobs:
           pip install pypdfium2 opencv-python-headless numpy pillow pytesseract pydantic typer rich structlog
 
       - name: Run CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: python
           queries: security-and-quality
 
       - name: Perform the analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:python"
