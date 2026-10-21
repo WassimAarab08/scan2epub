@@ -8,7 +8,6 @@ conversion testable without touching the filesystem beyond the page images.
 from __future__ import annotations
 
 import time
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -164,19 +163,26 @@ class Pipeline:
             self.reporter(event)
 
     def _ocr_cache_key(self, image: PageImage) -> str:
-        """Return the cache key of the OCR result of a page."""
+        """Return the cache key of the OCR result of a page.
+
+        The key covers everything that can change the result: the content of
+        the page, the settings of the engine and the pre-processing options.
+        Two runs that differ in any of them never share their artefacts.
+        """
         payload = {
             "version": _CACHE_VERSION,
-            "engine": getattr(self.ocr, "name", type(self.ocr).__name__),
+            "engine": self._engine_fingerprint(),
             "page": hash_file(image.path),
-            "config": hash_json(
-                {
-                    "preprocess": self.config.preprocess.model_dump(),
-                    "ocr": self.config.ocr_provider(getattr(self.ocr, "name", "")).model_dump(),
-                }
-            ),
+            "config": hash_json({"preprocess": self.config.preprocess.model_dump()}),
         }
         return hash_json(payload)
+
+    def _engine_fingerprint(self) -> dict[str, object]:
+        """Return the settings of the OCR engine, for the cache key."""
+        describe = getattr(self.ocr, "describe", None)
+        if callable(describe):
+            return dict(cast("dict[str, object]", describe()))
+        return {"engine": getattr(self.ocr, "name", type(self.ocr).__name__)}
 
     # -- stages ---------------------------------------------------------
 
@@ -330,10 +336,3 @@ class Pipeline:
             merged_paragraphs=result.merged_paragraphs,
             detected_footnotes=result.detected_footnotes,
         )
-
-
-def iter_block_texts(pages: Iterable[PageContent]) -> Iterable[str]:
-    """Yield the text of every block of the given pages."""
-    for page in pages:
-        for block in page.blocks:
-            yield block.text

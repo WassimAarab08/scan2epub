@@ -109,6 +109,16 @@ class TesseractOcrEngine:
                 "PATH, or pick another engine with --ocr."
             )
 
+    def describe(self) -> dict[str, object]:
+        """Return the settings that change the result of the recognition."""
+        return {
+            "engine": self.name,
+            "lang": self.lang,
+            "oem": self.oem,
+            "psm": self.psm,
+            "tessdata_dir": str(self.tessdata_dir) if self.tessdata_dir else None,
+        }
+
     def _config(self) -> str:
         """Return the Tesseract command line configuration."""
         parts = [f"--oem {self.oem}", f"--psm {self.psm}"]
@@ -164,16 +174,16 @@ class TesseractOcrEngine:
 
     def _to_blocks(self, data: dict[str, list[object]], image: PageImage) -> list[TextBlock]:
         """Convert the Tesseract data dictionary into text blocks."""
-        levels = [int(value) for value in data["level"]]
-        texts = [str(value) for value in data["text"]]
-        confs = [float(value) for value in data["conf"]]
-        lefts = [int(value) for value in data["left"]]
-        tops = [int(value) for value in data["top"]]
-        widths = [int(value) for value in data["width"]]
-        heights = [int(value) for value in data["height"]]
-        block_nums = [int(value) for value in data["block_num"]]
-        par_nums = [int(value) for value in data["par_num"]]
-        line_nums = [int(value) for value in data["line_num"]]
+        levels = [int(value) for value in data.get("level", [])]
+        texts = [str(value) for value in data.get("text", [])]
+        confs = [float(value) for value in data.get("conf", [])]
+        lefts = [int(value) for value in data.get("left", [])]
+        tops = [int(value) for value in data.get("top", [])]
+        widths = [int(value) for value in data.get("width", [])]
+        heights = [int(value) for value in data.get("height", [])]
+        block_nums = [int(value) for value in data.get("block_num", [])]
+        par_nums = [int(value) for value in data.get("par_num", [])]
+        line_nums = [int(value) for value in data.get("line_num", [])]
 
         # Group the words into (block, paragraph) groups, preserving order.
         groups: dict[tuple[int, int], list[int]] = {}

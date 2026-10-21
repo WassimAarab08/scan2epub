@@ -38,12 +38,16 @@ def available_engines() -> tuple[str, ...]:
     return KNOWN_ENGINES
 
 
-def build_ocr_engine(config: Config, name: str | None = None) -> OcrEngine:
+def build_ocr_engine(
+    config: Config, name: str | None = None, *, language: str | None = None
+) -> OcrEngine:
     """Build the OCR engine described by the configuration.
 
     Args:
         config: The effective configuration.
         name: The name of the engine. Defaults to ``[general] ocr_engine``.
+        language: The language of the engine. When given, it wins over both
+            the provider section and the general configuration.
 
     Returns:
         The engine.
@@ -60,9 +64,9 @@ def build_ocr_engine(config: Config, name: str | None = None) -> OcrEngine:
     provider = config.ocr_provider(engine_name)
     options = provider.options
     tessdata = options.get("tessdata_dir")
-    language = str(options.get("lang", config.general.language))
+    engine_language = language or str(options.get("lang", config.general.language))
     return TesseractOcrEngine(
-        lang=language,
+        lang=engine_language,
         oem=int(options.get("oem", 1)),
         psm=int(options.get("psm", 3)),
         tessdata_dir=Path(tessdata) if tessdata else None,
@@ -70,12 +74,20 @@ def build_ocr_engine(config: Config, name: str | None = None) -> OcrEngine:
 
 
 def with_language(config: Config, language: str) -> Config:
-    """Return a copy of the configuration that uses another OCR language."""
+    """Return a copy of the configuration that uses another OCR language.
+
+    The provider section is updated as well, so that the engine and the
+    cache key always agree with the language that was asked for.
+    """
+    providers = {
+        name: provider.model_copy(update={"options": {**provider.options, "lang": language}})
+        for name, provider in config.ocr.items()
+    }
     return Config(
         general=config.general.model_copy(update={"language": language}),
         preprocess=config.preprocess,
         clean=config.clean,
-        ocr=config.ocr,
+        ocr=providers,
         correctors=config.correctors,
         source_path=config.source_path,
     )

@@ -73,6 +73,14 @@ class OcrEngine(Protocol):
         """Return the text blocks of ``image`` in reading order."""
         ...
 
+    def describe(self) -> dict[str, object]:
+        """Return the settings that change the result.
+
+        The pipeline hashes this dictionary to build the key of the cache, so
+        two runs that use different settings never share their artefacts.
+        """
+        ...
+
 
 @runtime_checkable
 class TextCorrector(Protocol):

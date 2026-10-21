@@ -16,7 +16,7 @@ from scan2epub.application.pipeline import Pipeline, PipelineResult
 from scan2epub.application.progress import ProgressEvent
 from scan2epub.config import Config, GeneralConfig, load_config, output_language_for
 from scan2epub.domain.models import BookMetadata
-from scan2epub.errors import ConfigurationError
+from scan2epub.errors import ConfigurationError, EpubValidationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
 from scan2epub.infrastructure.pdf.pdfium_source import PdfiumPageSource
 from scan2epub.logging import get_logger
@@ -137,6 +137,13 @@ def convert(
     no_validate: Annotated[
         bool, typer.Option("--no-validate", help="Skip the EPUBCheck validation.")
     ] = False,
+    strict: Annotated[
+        bool,
+        typer.Option(
+            "--strict",
+            help="Fail when the generated EPUB does not pass the EPUBCheck validation.",
+        ),
+    ] = False,
     config_file: Annotated[
         Path | None,
         typer.Option("--config", help="Path to a config.toml file."),
@@ -179,7 +186,7 @@ def convert(
     ocr_language = language or str(options.get("lang", config.general.language))
     if ocr_language != config.general.language:
         config = with_language(config, ocr_language)
-    engine = build_ocr_engine(config)
+    engine = build_ocr_engine(config, language=ocr_language)
     metadata = _build_metadata(source, config.general, title, author, year, ocr_language)
 
     cache = None if no_cache else FileCache(cache_root)
@@ -210,6 +217,12 @@ def convert(
         pipeline.reporter = _ConsoleReporter(progress, task_id)
         result = pipeline.run(metadata, destination)
         progress.update(task_id, description="Done", completed=1, total=1)
+
+    if strict and result.validation.ran and not result.validation.passed:
+        raise EpubValidationError(
+            "The generated EPUB does not pass the EPUBCheck validation: "
+            + "; ".join(result.validation.errors[:5])
+        )
 
     _print_summary(console, result)
 
