@@ -77,6 +77,9 @@ la API REST, documentada en `/docs`.
 # Solo OCR local — totalmente offline, sin claves de API, sin red
 scan2epub convert libro.pdf -o libro.epub --ocr tesseract
 
+# ¿Qué soporta esta instalación?
+scan2epub doctor
+
 # Modelo local de visión-lenguaje (mejor con escaneos degradados)
 scan2epub convert libro.pdf -o libro.epub --ocr teleocr
 
