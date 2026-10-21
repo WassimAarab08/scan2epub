@@ -9,8 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **The governance of the repository.** `main` is protected: no direct push,
-  the CI must be green and a pull request is the only way in. The branching
-  model is described in `CONTRIBUTING.md`.
+  for anybody; the CI must be green **and** up to date; the history is
+  linear; the branches are deleted after the merge; every comment of a
+  review must be resolved. The branching model is described in
+  `CONTRIBUTING.md`.
 - `docs/roadmap.md`: the state of every phase, with what is missing.
 - `SUPPORT.md`: how to get help and how to ask a good question.
 - The `release.yml` workflow: it publishes the container images and creates
@@ -19,9 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `dependabot.yml`: the Python, JavaScript and GitHub Actions dependencies
   are kept up to date.
 - `CODEOWNERS`: who reviews which area.
+- `.gitmessage`: the template of the commit, with the sign-off.
 - The configuration file of the issues, with the links to the documentation.
+- Fifteen issues to work on, with the labels and the milestones.
 
 ### Fixed
+- **The JSON of `scan2epub config --show` was not valid JSON** when the
+  terminal was narrow: the renderer wrapped the long lines. It is printed
+  without wrapping now.
+- The tests no longer depend on the colours of the terminal, nor on the
+  exact characters that the OCR produces: the recognition differs from one
+  platform to another.
 - **The cache no longer mixes languages.** The key of a cached recognition
   result now covers the settings of the engine, so a book recognised in
   English is never served again when the language changes.
