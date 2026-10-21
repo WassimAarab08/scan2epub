@@ -1,0 +1,36 @@
+# The sign-off of the Developer Certificate of Origin (DCO)
+#
+# Every commit must carry a "Signed-off-by" line that proves that you have
+# the right to submit the code under the licence of the project. The Git
+# command that adds it is:
+#
+#     git commit -s
+#
+# It adds a line like this:
+#
+#     Signed-off-by: Your Name <you@example.com>
+#
+# It is the same as the "certify the origin" checkbox of the GitHub web
+# editor, and it is the same as the "--signoff" of the Linux kernel.
+
+<type>(<scope>): <imperative summary>
+
+# Explain why the change is needed, not only what it does.
+#
+# Fixes #123
+
+# The types are:
+#
+#   feat     a new feature
+#   fix      a bug fix
+#   docs     the documentation
+#   test     the tests
+#   refactor a change without a new behaviour
+#   perf     a performance improvement
+#   build    the build, the dependencies, the containers
+#   ci       the continuous integration
+#   chore    the maintenance
+#
+# The scopes are:
+#
+#   cli api web core ocr correct epub cache eval docs deps
