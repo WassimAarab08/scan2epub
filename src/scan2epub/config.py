@@ -212,25 +212,28 @@ def _build_section(section: type[_Section], raw: dict[str, Any]) -> Any:  # noqa
 
 
 def _split_providers(raw: dict[str, Any], prefix: str) -> dict[str, OcrProviderConfig]:
-    """Build the provider sections of the configuration file."""
+    """Build the provider sections of the configuration file.
+
+    Every key of the section except ``adapter`` becomes an option, whether it
+    is written directly (``[ocr.tesseract] lang = "spa"``) or in a sub-table
+    (``[ocr.tesseract.options] lang = "spa"``). The sub-table wins when both
+    are present.
+    """
     providers: dict[str, OcrProviderConfig] = {}
     for name, body in raw.items():
         if not isinstance(body, dict):
             continue
         table = cast("dict[str, Any]", body)
         raw_options = table.get("options")
-        options: dict[str, Any] = (
+        sub_table: dict[str, Any] = (
             cast("dict[str, Any]", raw_options) if isinstance(raw_options, dict) else {}
         )
-        rest = {key: value for key, value in table.items() if key not in {"adapter", "options"}}
+        direct = {key: value for key, value in table.items() if key not in {"adapter", "options"}}
+        options: dict[str, Any] = {**direct, **sub_table}
         raw_adapter = table.get("adapter")
         adapter = raw_adapter if isinstance(raw_adapter, str) else None
         try:
-            providers[name] = OcrProviderConfig(
-                adapter=adapter,
-                options=options,
-                **rest,
-            )
+            providers[name] = OcrProviderConfig(adapter=adapter, options=options)
         except ValidationError as exc:
             raise ConfigurationError(f"Invalid [{prefix}.{name}] section: {exc}") from exc
     return providers
@@ -263,7 +266,8 @@ def load_config(path: Path | None = None) -> Config:
     raw: dict[str, Any] = {}
     if config_file is not None:
         try:
-            parsed = tomllib.loads(config_file.read_text(encoding="utf-8"))
+            # "utf-8-sig" tolerates a byte order mark.
+            parsed = tomllib.loads(config_file.read_text(encoding="utf-8-sig"))
         except tomllib.TOMLDecodeError as exc:
             raise ConfigurationError(f"Cannot parse {config_file}: {exc}") from exc
         raw = dict(parsed)
