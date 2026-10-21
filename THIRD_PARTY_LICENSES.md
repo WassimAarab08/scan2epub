@@ -32,8 +32,12 @@ weights are tracked separately, at the bottom of this file.
 | [structlog](https://github.com/hynek/structlog) | >=24.1 | MIT | Structured logging |
 | [httpx](https://github.com/encode/httpx) | >=0.27 | BSD-3-Clause | HTTP client (SSE, remote APIs) |
 | [tenacity](https://github.com/jd/tenacity) | >=9.0 | Apache-2.0 | Retries with exponential backoff |
-| [python-slugify](https://github.com/un33k/python-slugify) | >=8.0 | BSD-3-Clause | Stable file/anchor identifiers |
 | [tomli-w](https://github.com/scientific-python/tomli-w) | >=1.1 | MIT | Writing `config.toml` |
+| [certifi](https://github.com/certifi/python-certifi) | >=2024.2 | **MPL-2.0** | Root certificates, pulled in by `httpx` |
+
+> **Note on `certifi`.** MPL-2.0 is a *file-level* copyleft licence: it does
+> not impose any obligation on the work that merely uses the package, and it
+> is on the OSI approved list. It is tracked here for transparency.
 
 ## Runtime dependencies — Python (optional extras)
 
@@ -105,6 +109,7 @@ repository. The `.gitignore` blocks `*.safetensors`, `*.bin`, `*.onnx`,
 | EbookLib | AGPL-3.0 | Copyleft; also does not target EPUB 3 navigation well |
 | `marker` / `surya` | GPL-3.0 | Copyleft |
 | MinerU (non-commercial edition) | AGPL-3.0 / non-commercial | Copyleft + non-commercial restriction |
+| `python-slugify` | BSD-3-Clause | Permissive itself, but it pulls in `text-unidecode`, which is **GPL/Artistic**. Removed for that reason. |
 | `paddleocr` runtime | Apache-2.0 (ok) but heavyweight | Not used; we rely on `transformers` for PaddleOCR-VL |
 | `kraken` (as a hard dependency) | Apache-2.0 (ok) | Pulls a large scientific stack; kept as an optional adapter |
 

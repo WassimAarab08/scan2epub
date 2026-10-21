@@ -150,6 +150,7 @@ In short:
 from scan2epub.domain.ports import OcrEngine
 from scan2epub.domain.models import Page, TextBlock
 
+
 class MyEngine:
     name = "my-engine"
 
