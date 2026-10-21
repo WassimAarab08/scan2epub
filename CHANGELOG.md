@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A word that ends with a letter is not a conjunction.** "The company" was
   treated as if it ended with the conjunction "y", so unrelated paragraphs
   were merged.
+- **A note that the OCR split no longer loses its second half.** The halves
+  are recognised together, so the whole note reaches the EPUB.
 - The size of an uploaded PDF is now checked while it is written, instead of
   after the whole file reached the disk.
 - The `<dc:creator>` of the package document no longer carries stray
@@ -41,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A configuration file with a byte order mark is read correctly.
 - The version of EPUBCheck is cached, so a conversion starts the virtual
   machine only once.
-- 237 tests, 89 % of coverage, including a regression test for every bug
+- 241 tests, 90 % of coverage, including a regression test for every bug
   above.
 
 ## [0.1.0] - Unreleased

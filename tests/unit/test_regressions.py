@@ -206,6 +206,67 @@ def test_a_word_that_ends_with_a_conjunction_is_not_a_conjunction() -> None:
     assert _continues_previous("bread and", "butter")
 
 
+def test_a_note_that_the_ocr_split_keeps_its_text() -> None:
+    """A note cut in two by the OCR must not lose its second half.
+
+    Before the fix, the second half of a note carried no marker of its own,
+    so it was dropped when the notes were collected.
+    """
+    from scan2epub.application.stages.clean import clean_pages
+    from scan2epub.domain.models import BlockKind, PageContent
+
+    def note(lines: tuple[str, ...], order: int) -> TextBlock:
+        return TextBlock(
+            lines=lines,
+            bbox=BBox(0.1, 0.85, 0.9, 0.9),
+            kind=BlockKind.BODY,
+            order=order,
+            page=0,
+        )
+
+    pages = [
+        PageContent(
+            index=0,
+            blocks=(
+                note(("1 Nota del autor sobre la",), 0),
+                note(("imprenta y sus costes.",), 1),
+            ),
+        )
+    ]
+    result = clean_pages(pages)
+    notes = [block for block in result.pages[0].blocks if block.kind is BlockKind.FOOTNOTE]
+    assert len(notes) == 1
+    assert "imprenta y sus costes." in notes[0].text
+
+
+def test_two_notes_with_their_own_number_are_not_merged() -> None:
+    """A note that carries a number of its own is a different note."""
+    from scan2epub.application.stages.clean import clean_pages
+    from scan2epub.domain.models import BlockKind, PageContent
+
+    def note(text: str, order: int) -> TextBlock:
+        return TextBlock(
+            lines=(text,),
+            bbox=BBox(0.1, 0.85, 0.9, 0.9),
+            kind=BlockKind.BODY,
+            order=order,
+            page=0,
+        )
+
+    pages = [
+        PageContent(
+            index=0,
+            blocks=(
+                note("1 Primera nota", 0),
+                note("2 Segunda nota", 1),
+            ),
+        )
+    ]
+    result = clean_pages(pages)
+    notes = [block for block in result.pages[0].blocks if block.kind is BlockKind.FOOTNOTE]
+    assert len(notes) == 2
+
+
 def test_a_comma_still_continues_the_paragraph() -> None:
     """A line that ends with a comma continues the paragraph."""
     assert _continues_previous("la casa, el jardín", "y el patio")

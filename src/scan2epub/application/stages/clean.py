@@ -214,15 +214,33 @@ def _merge_into_paragraphs(blocks: list[TextBlock]) -> tuple[list[TextBlock], in
 
     merged: list[TextBlock] = []
     last_body: int | None = None
+    last_footnote: int | None = None
     merges = 0
     hyphen_joins = 0
     for block in blocks:
         if block.kind is BlockKind.HEADING:
             merged.append(block)
             last_body = None
+            last_footnote = None
+            continue
+        if block.kind is BlockKind.FOOTNOTE:
+            # A note that the OCR split in two is a single note: the second
+            # half carries no marker of its own.
+            if last_footnote is not None:
+                previous = merged[last_footnote]
+                previous_text = " ".join(previous.text.split())
+                current_text = " ".join(block.text.split())
+                if _FOOTNOTE_RE.match(current_text) is None and _continues_previous(
+                    previous_text, current_text
+                ):
+                    merged[last_footnote] = previous.with_lines(previous.lines + block.lines)
+                    merges += 1
+                    continue
+            merged.append(block)
+            last_footnote = len(merged) - 1
             continue
         if block.kind is not BlockKind.BODY:
-            # Footnotes and illustrations do not break the paragraph.
+            # Illustrations and other kinds do not break the paragraph.
             merged.append(block)
             continue
         if last_body is not None:
@@ -246,22 +264,35 @@ def _merge_into_paragraphs(blocks: list[TextBlock]) -> tuple[list[TextBlock], in
                 continue
         merged.append(block)
         last_body = len(merged) - 1
+        last_footnote = None
     return merged, merges, hyphen_joins
 
 
 def _detect_footnotes(blocks: list[TextBlock], config: CleanConfig) -> tuple[list[TextBlock], int]:
-    """Mark the blocks that look like footnotes."""
+    """Mark the blocks that look like footnotes.
+
+    A note that the OCR split in two has a marker only in its first half, so
+    the halves are recognised together: the second one continues the note.
+    """
     detected = 0
     marked: list[TextBlock] = []
+    last_footnote: int | None = None
     for block in blocks:
         candidate = block
-        if (
-            candidate.kind is BlockKind.BODY
-            and candidate.bbox.y0 >= config.footnote_zone
-            and _FOOTNOTE_RE.match(" ".join(candidate.text.split())) is not None
-        ):
-            candidate = candidate.with_kind(BlockKind.FOOTNOTE)
-            detected += 1
+        if candidate.kind is BlockKind.BODY and candidate.bbox.y0 >= config.footnote_zone:
+            text = " ".join(candidate.text.split())
+            has_marker = _FOOTNOTE_RE.match(text) is not None
+            continues = False
+            if last_footnote is not None and not has_marker:
+                previous = marked[last_footnote]
+                previous_text = " ".join(previous.text.split())
+                continues = _continues_previous(previous_text, text)
+            if has_marker or continues:
+                candidate = candidate.with_kind(BlockKind.FOOTNOTE)
+                detected += 1
+                last_footnote = len(marked)
+        else:
+            last_footnote = None
         marked.append(candidate)
     return marked, detected
 
