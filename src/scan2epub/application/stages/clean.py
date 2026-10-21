@@ -37,6 +37,13 @@ _FOOTNOTE_RE = re.compile(r"^\s*[\(\[]?(\d{1,3})[\)\].:]?\s+\S")
 #: A word continuation after a hyphen always starts with a lowercase letter.
 _CONTINUATION_RE = re.compile(r"^[a-záéíóúüñçàèìòùâêîôûäëïöüãõæœß]")
 
+#: A conjunction at the end of a line. The word must stand on its own: the
+#: English word "company" does not end with a conjunction.
+_TRAILING_CONJUNCTION_RE = re.compile(
+    r"(?:\W|^)(?:y|e|o|u|i|ni|y|a|and|or|but|so|that|which|when|where)$",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class CleanResult:
@@ -180,12 +187,11 @@ def _continues_previous(previous: str, following: str) -> bool:
     if previous.rstrip().endswith("-"):
         # The word was broken at the end of the line: always continue.
         return True
-    # A line that does not close a sentence continues the paragraph, unless
-    # the next block clearly starts a new one.
     if following[:1].isupper() and following[:1].isascii():
-        # Uppercase start: only continue when the previous line ends with a
-        # comma or a conjunction-like continuation.
-        return previous.rstrip().endswith((",", ";", "y", "e", "o", "u", "i", "—", "–"))
+        # An upper-case start usually means a new sentence, unless the
+        # previous line ends with a conjunction or a comma.
+        stripped = previous.rstrip()
+        return stripped.endswith((",", ";", ":")) or bool(_TRAILING_CONJUNCTION_RE.search(stripped))
     return True
 
 

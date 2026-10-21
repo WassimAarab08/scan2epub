@@ -18,9 +18,12 @@ __all__ = ["classify_heading", "is_heading_text"]
 _STRUCTURAL_RE = re.compile(
     r"^\s*(cap[ií]tulo|libro|parte|tomo|ap[eé]ndice|anejo|anexo|pr[oó]logo|"
     r"introducci[oó]n|conclusi[oó]n|prefacio|contents|book|part|chapter|"
-    r"appendix|prologue|preface|introduction|preliminaries)\b",
+    r"appendix|prologue|preface|introduction|preliminaries)\b\s*(.*)$",
     re.IGNORECASE,
 )
+
+#: A number or a Roman numeral after the structural keyword.
+_ORDINAL_RE = re.compile(r"^(?:[0-9]{1,4}|[IVXLCDM]{1,7})$", re.IGNORECASE)
 
 #: A bare Roman numeral used as a heading.
 _ROMAN_RE = re.compile(r"^\s*[IVXLCDM]{1,7}\s*$")
@@ -48,6 +51,28 @@ def _is_centered(block: TextBlock) -> bool:
     return abs(block.bbox.center_x - 0.5) <= 0.1
 
 
+def is_structural_heading(text: str) -> bool:
+    """Whether a text introduces a structural division of the book.
+
+    The keyword alone is not enough: "Book the tickets" and "Part of the
+    problem" are ordinary sentences. A heading names the division with a
+    number, with a Roman numeral, or with a capitalised word, and it is
+    short.
+    """
+    match = _STRUCTURAL_RE.match(text)
+    if match is None:
+        return False
+    rest = match.group(2).strip()
+    if not rest:
+        # The bare keyword is a heading: "Chapter", "INTRODUCCION".
+        return True
+    if _ORDINAL_RE.match(rest):
+        return True
+    # A capitalised word, in a short line. A lower-case word after the
+    # keyword means a sentence: "Book the tickets", "Part of the problem".
+    return rest[:1].isupper() and len(text) <= 60
+
+
 def is_heading_text(text: str) -> bool:
     """Whether a text looks like a heading, ignoring its geometry."""
     stripped = " ".join(text.split())
@@ -56,7 +81,7 @@ def is_heading_text(text: str) -> bool:
     words = stripped.split()
     if len(words) > MAX_HEADING_WORDS:
         return False
-    if _STRUCTURAL_RE.match(stripped):
+    if is_structural_heading(stripped):
         return True
     if _ROMAN_RE.match(stripped):
         return True
@@ -82,7 +107,7 @@ def classify_heading(block: TextBlock) -> int | None:  # noqa: PLR0911
     if len(words) > MAX_HEADING_WORDS:
         return None
 
-    if _STRUCTURAL_RE.match(text):
+    if is_structural_heading(text):
         return 1
     if _ROMAN_RE.match(text):
         return 2
