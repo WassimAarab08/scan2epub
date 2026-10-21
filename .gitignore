@@ -64,3 +64,6 @@ secrets.toml
 
 # --- Test assets fetched on demand ---
 tests/browser/assets/
+
+tmp_issue.json
+
