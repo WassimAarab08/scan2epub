@@ -13,7 +13,6 @@ concurrency:
 env:
   UV_VERSION: "0.13.4"
   PYTHON_VERSION: "3.12"
-  FORCE_COLOR: "1"
 
 jobs:
   quality:
@@ -33,6 +32,13 @@ jobs:
 
       - name: Install the project
         run: uv sync --extra api --extra eval --locked
+
+      - name: Install Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-spa tesseract-ocr-spa-old tesseract-ocr-eng
+          tesseract --list-langs
 
       - name: Check the formatting
         run: uv run ruff format --check .
@@ -106,7 +112,6 @@ jobs:
           name: sample-epub
           path: sample.epub
           retention-days: 7
-
   browser:
     name: Browser tests
     runs-on: ubuntu-latest
@@ -144,6 +149,9 @@ jobs:
   docker:
     name: Build the images
     runs-on: ubuntu-latest
+    # The images are only published from `main`; on a pull request they are
+    # built but not pushed.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
@@ -166,8 +174,10 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile.cpu
-          push: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/${{ github.repository }}:cpu
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:cpu
+            ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -176,7 +186,7 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile.gpu
-          push: ${{ github.event_name == 'push' }}
+          push: true
           tags: ghcr.io/${{ github.repository }}:gpu
           cache-from: type=gha
           cache-to: type=gha,mode=max

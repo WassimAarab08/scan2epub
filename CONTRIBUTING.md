@@ -8,6 +8,7 @@ Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ## Table of contents
 
+- [The branching model](#the-branching-model)
 - [Licensing rules (read this first)](#licensing-rules-read-this-first)
 - [Development setup](#development-setup)
 - [Quality gates](#quality-gates)
@@ -17,6 +18,75 @@ Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 - [Adding a dependency](#adding-a-dependency)
 - [Code style](#code-style)
 - [Reporting bugs](#reporting-bugs)
+- [Releases](#releases)
+
+## The branching model
+
+The project uses **trunk-based development** with a single long-lived branch.
+
+| Branch | What it holds | Who writes to it |
+| --- | --- | --- |
+| `main` | The code that is released. It is **always** in a working state. | Nobody directly: it is written by the merge of a pull request. |
+| `feat/…`, `fix/…`, `docs/…`, `chore/…` | One pull request each. | You, from your fork or from a branch of this repository. |
+
+The rules:
+
+1. **Never push to `main`.** `main` is protected: a direct push is refused.
+2. **Every change goes through a pull request**, however small it is. A
+   one-line typo fix is a pull request too.
+3. **The CI must be green** before a pull request can be merged. The checks
+   that gate the merge are `quality` (lint, types, tests), `epub` (the
+   generated book passes EPUBCheck) and `browser` (the book renders in a real
+   browser and opens in foliate-js).
+4. **A pull request needs one review** from a maintainer. A pull request that
+   only fixes the formatting does not need one.
+5. **Do not force-push a branch that has a review in progress.** Use
+   `git push --force-with-lease` on your own branch.
+6. **The history is linear.** The maintainers squash-merge, with the title of
+   the pull request, which is a Conventional Commit.
+
+### Naming the branches
+
+```
+feat/ocr-paddleocr-vl      a new engine
+feat/api-job-queue         a new feature
+fix/cache-language-key     a bug
+docs/adding-an-engine      the documentation
+chore/dependabot           the maintenance
+```
+
+The name is the type of the change, a slash, and a short description in
+kebab case.
+
+### Working on a pull request
+
+```bash
+git clone https://github.com/<your-name>/scan2epub.git
+cd scan2epub
+git remote add upstream https://github.com/WassimAarab08/scan2epub.git
+git checkout -b fix/whatever-the-problem-is
+# … your changes …
+git push -u origin fix/whatever-the-problem-is
+```
+
+Then open the pull request against `main` from the GitHub page, or:
+
+```bash
+gh pr create --base main --fill
+```
+
+Keep the branch up to date with `main` while you work:
+
+```bash
+git fetch upstream
+git rebase upstream/main
+```
+
+### Working on a small issue
+
+If the issue is labelled `good first issue`, comment on it before you start,
+so that two people do not work on the same thing. If somebody already did,
+the comment will tell you.
 
 ## Licensing rules (read this first)
 
@@ -142,17 +212,49 @@ own.
 
 ## Pull request process
 
-1. Fork the repository and create a branch from `main`:
-   `git checkout -b feat/my-feature`.
-2. Make your change, with tests.
+1. Open an issue first for anything bigger than a bug fix, so that the
+   approach can be discussed before you write the code.
+2. Create a branch from `main` and make your change, with tests.
 3. Run the quality gates locally.
-4. Push and open a pull request using the template.
-5. A maintainer reviews within a few days. Expect questions — that's normal.
-6. Once approved, the maintainer squashes-merge with a Conventional Commit
-   title, or asks you to rebase.
+4. Push the branch and open a pull request against `main`, using the
+   template. Describe **why** the change is needed, not only what it does.
+5. A maintainer reviews it within a few days. Expect questions — that is
+   normal, and it is not a sign that the change is bad.
+6. When the review is done and the CI is green, the maintainer squash-merges
+   it with a Conventional Commit title.
 
-Never force-push to a branch that has a review in progress; use
-`git push --force-with-lease` only on your own branch.
+A pull request is ready to be reviewed when:
+
+- [ ] It is based on `main` and it can be merged without a conflict.
+- [ ] The quality gates pass locally.
+- [ ] The new behaviour is covered by tests.
+- [ ] The documentation is updated when the behaviour changes.
+- [ ] `CHANGELOG.md` has an entry under `## [Unreleased]`.
+- [ ] It adds no copyleft dependency.
+
+The title of the pull request must be a Conventional Commit, because it
+becomes the title of the commit:
+
+```
+fix(clean): stop treating a sentence that starts with "Book" as a heading
+feat(ocr): add the PaddleOCR-VL engine
+docs: document the cost control
+```
+
+## Releases
+
+The releases follow [Semantic Versioning](https://semver.org/):
+
+| Change | Version |
+| --- | --- |
+| A bug fix | `PATCH` |
+| A new feature, backwards compatible | `MINOR` |
+| A change that breaks the API or the format | `MAJOR` |
+
+The maintainers cut the releases. The `release.yml` workflow publishes the
+container images and creates the GitHub release from the `CHANGELOG.md`, so
+the only thing a contributor has to do is to add their entry under
+`## [Unreleased]`.
 
 ## Adding an OCR engine or text corrector
 

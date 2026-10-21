@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
-from rich.syntax import Syntax
 
 from scan2epub.config import default_config_path, load_config
 
@@ -127,14 +125,9 @@ def config(
             },
             "source_path": str(effective.source_path) if effective.source_path else None,
         }
-        console.print(
-            Syntax(
-                json.dumps(payload, indent=2, default=str),
-                "json",
-                theme="ansi_dark",
-                background_color="default",
-            )
-        )
+        # The JSON is printed without wrapping: a wrapped line would not be
+        # valid JSON any more.
+        console.print_json(data=payload, indent=2, default=str)
         return
 
     console.print(f"[bold]Configuration file:[/bold] {target}")

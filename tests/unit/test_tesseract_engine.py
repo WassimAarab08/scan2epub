@@ -14,6 +14,8 @@ from scan2epub.infrastructure.ocr.tesseract import (
     tesseract_version,
 )
 
+pytestmark = pytest.mark.usefixtures("require_tesseract")
+
 
 def _data() -> dict[str, list[object]]:
     """Build a Tesseract data dictionary with two words in one line."""
@@ -82,6 +84,13 @@ def test_the_empty_words_are_ignored() -> None:
     assert blocks[0].lines == ("mundo",)
 
 
+def test_a_dictionary_without_the_expected_keys_is_tolerated() -> None:
+    """A truncated answer from Tesseract does not raise a KeyError."""
+    engine = TesseractOcrEngine(lang="eng")
+    page = PageImage(index=0, path=Path("a.png"), width=1000, height=1000)
+    assert engine._to_blocks({}, page) == []
+
+
 def test_the_version_is_reported() -> None:
     """The version of Tesseract is available."""
     version = tesseract_version()
@@ -114,6 +123,15 @@ def test_the_tessdata_directory_is_added_to_the_command() -> None:
     assert "opt" in config
     assert "--oem 1" in config
     assert "--psm 3" in config
+
+
+def test_the_engine_describes_its_settings() -> None:
+    """The settings that change the result are described."""
+    engine = TesseractOcrEngine(lang="spa", psm=6)
+    described = engine.describe()
+    assert described["engine"] == "tesseract"
+    assert described["lang"] == "spa"
+    assert described["psm"] == 6
 
 
 def test_the_engine_reports_a_missing_binary(monkeypatch: pytest.MonkeyPatch) -> None:

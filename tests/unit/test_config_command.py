@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from scan2epub.cli.main import app
 from scan2epub.config import load_config
+from tests.support import strip_ansi
 
 runner = CliRunner()
 
@@ -80,6 +81,24 @@ def test_the_json_output_is_valid(tmp_path: Path) -> None:
     target = tmp_path / "config.toml"
     target.write_text("[general]\ndpi = 150\n", encoding="utf-8")
     result = runner.invoke(app, ["config", "--show", "--path", str(target)])
-    # The Rich renderer may add ANSI codes; the JSON must still be there.
-    assert '"dpi": 150' in result.output
-    assert json.dumps  # the import is used by the reader of this test
+    # The Rich renderer colours its output, so the colours are removed
+    # before the JSON is parsed.
+    payload = json.loads(strip_ansi(result.output))
+    assert payload["general"]["dpi"] == 150
+
+
+def test_the_json_output_is_not_wrapped(tmp_path: Path) -> None:
+    """A long path must not break the JSON into several lines.
+
+    Before the fix, the output was rendered with the syntax highlighter,
+    which wraps the long lines: the result was not valid JSON any more.
+    """
+    directory = tmp_path / ("a-very-long-directory-name-" * 5)
+    directory.mkdir(parents=True)
+    target = directory / "config.toml"
+    target.write_text("[general]\ndpi = 150\n", encoding="utf-8")
+    result = runner.invoke(app, ["config", "--show", "--path", str(target)])
+    assert result.exit_code == 0
+    payload = json.loads(strip_ansi(result.output))
+    assert payload["general"]["dpi"] == 150
+    assert payload["source_path"].endswith("config.toml")

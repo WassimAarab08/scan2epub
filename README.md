@@ -191,19 +191,31 @@ reproduction script.
 
 ## Roadmap
 
-- [x] Phase 0 — repository, license, docs, CI skeleton
-- [ ] Phase 1 — MVP: Tesseract → deterministic cleaning → valid EPUB 3
-- [ ] Phase 2 — local VLM engines (TeleOCR, PaddleOCR-VL), caching, resume, CER/WER eval
-- [ ] Phase 3 — LiteLLM remote OCR + LLM correction with guardrails and cost control
-- [ ] Phase 4 — FastAPI, SQLite job queue, worker process, SSE progress
-- [ ] Phase 5 — Angular web UI, page-by-page review, integrated reader
-- [ ] Phase 6 — Docker (CPU/GPU), full CI, documentation, v0.1.0 release
+The full plan, with the state of every piece, is in
+[`docs/roadmap.md`](docs/roadmap.md).
+
+| Phase | State | What it delivers |
+| --- | --- | --- |
+| 0 — Repository | ✅ 100 % | Repository, licence, documentation, CI, protected `main`. |
+| 1 — MVP | ✅ 100 % | `scan2epub convert`: Tesseract → deterministic cleaning → a valid EPUB 3. |
+| 2 — Local models | ◔ 25 % | The cache is done; the vision-language engines, the layout analyser and the CER/WER evaluation are not. |
+| 3 — Remote models | ○ 0 % | LiteLLM: remote OCR, LLM correction with guardrails, cost control. |
+| 4 — Service | ◔ 25 % | The REST API exists; the queue, the worker and the progress by SSE do not. |
+| 5 — Web interface | ○ 0 % | The Angular application, the page-by-page review, the integrated reader. |
+| 6 — Release | ◔ 50 % | The images and the CI are done; the v0.1.0 release is not. |
+
+**Contributions are welcome.** The issues labelled
+[`good first issue`](https://github.com/WassimAarab08/scan2epub/labels/good%20first%20issue)
+are the easiest way to start, and
+[`docs/adding-an-engine.md`](docs/adding-an-engine.md) shows how to write an
+OCR engine in fewer than fifty lines.
 
 ## Documentation
 
 | Document | Contents |
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model, the safety of the corrector |
+| [`docs/roadmap.md`](docs/roadmap.md) | What is done, what is not, and where you can help |
 | [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` in under 50 lines |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, environment variables, providers |
 | [`docs/usage.md`](docs/usage.md) | CLI reference and recipes |
@@ -211,7 +223,8 @@ reproduction script.
 | [`docs/epub-layout.md`](docs/epub-layout.md) | The anatomy of the generated EPUB, file by file |
 | [`docs/benchmarks.md`](docs/benchmarks.md) | Evaluation methodology and results |
 | [`docs/naming.md`](docs/naming.md) | Why the project is called `scan2epub` |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow, commit conventions |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | The branching model, the development workflow, the commit conventions |
+| [`SUPPORT.md`](SUPPORT.md) | How to get help and how to ask a good question |
 | [`SECURITY.md`](SECURITY.md) | Reporting vulnerabilities |
 | [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) | Dependency licenses and rejected copyleft libs |
 

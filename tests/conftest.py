@@ -52,6 +52,15 @@ def sample_pdf(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def require_tesseract() -> None:
+    """Skip the test when Tesseract is not installed."""
+    from scan2epub.infrastructure.ocr.tesseract import tesseract_version
+
+    if tesseract_version() is None:
+        pytest.skip("Tesseract is not installed")
+
+
+@pytest.fixture
 def scanned_image(tmp_path: Path) -> Path | None:
     """Return a degraded scan-like image, or ``None`` without a system font."""
     return make_scanned_image(tmp_path / "scan.png")

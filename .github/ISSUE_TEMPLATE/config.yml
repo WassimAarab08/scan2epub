@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: The documentation
+    url: https://github.com/WassimAarab08/scan2epub/tree/main/docs
+    about: The architecture, the configuration and the guide to write an engine.
+  - name: The roadmap
+    url: https://github.com/WassimAarab08/scan2epub/blob/main/docs/roadmap.md
+    about: What is done, what is not, and where you can help.
+  - name: Report a security problem
+    url: https://github.com/WassimAarab08/scan2epub/security/advisories/new
+    about: Please report the vulnerabilities privately, not in a public issue.

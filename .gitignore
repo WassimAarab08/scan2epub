@@ -21,6 +21,8 @@ coverage.xml
 # --- Project runtime data ---
 .cache/
 .scan2epub/
+tmp/
+build/
 *.epub
 !samples/**/*.epub
 *.db
@@ -62,3 +64,6 @@ secrets.toml
 
 # --- Test assets fetched on demand ---
 tests/browser/assets/
+
+tmp_issue.json
+

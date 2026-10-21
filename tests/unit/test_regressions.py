@@ -55,7 +55,7 @@ class PdfiumSourceStub:
         return [PageImage(index=0, path=self.path, width=100, height=100)]
 
 
-def test_the_cache_key_depends_on_the_language(tmp_path: Path) -> None:
+def test_the_cache_key_depends_on_the_language(tmp_path: Path, require_tesseract: None) -> None:
     """Two languages must never share their cached recognition.
 
     Before the fix, the key only covered the pre-processing options, so a
@@ -77,7 +77,9 @@ def test_the_cache_key_depends_on_the_language(tmp_path: Path) -> None:
     assert keys["eng"] != keys["spa"]
 
 
-def test_the_cache_key_depends_on_the_engine_settings(tmp_path: Path) -> None:
+def test_the_cache_key_depends_on_the_engine_settings(
+    tmp_path: Path, require_tesseract: None
+) -> None:
     """Two different segmentations must not share their artefacts."""
     from scan2epub.application.cache import FileCache
 
@@ -102,7 +104,7 @@ def test_the_cache_key_depends_on_the_engine_settings(tmp_path: Path) -> None:
     assert keys[0] != keys[1]
 
 
-def test_the_command_line_language_wins_over_the_file() -> None:
+def test_the_command_line_language_wins_over_the_file(require_tesseract: None) -> None:
     """``--lang`` must win over the ``[ocr.tesseract] lang`` of the file.
 
     Before the fix, the provider section always won and the language of the
@@ -129,7 +131,7 @@ def test_the_language_override_also_changes_the_provider() -> None:
     assert overridden.ocr_provider("tesseract").options["lang"] == "eng"
 
 
-def test_the_options_of_a_provider_are_read(tmp_path: Path) -> None:
+def test_the_options_of_a_provider_are_read(tmp_path: Path, require_tesseract: None) -> None:
     """The settings written in the file must reach the engine.
 
     Before the fix, the keys of a provider section were stored apart from

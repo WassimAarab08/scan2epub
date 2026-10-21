@@ -1,0 +1,19 @@
+# The people who review the changes of each area.
+#
+# The owner is asked for a review when a pull request touches the area. The
+# owner is not the only one who can review: anybody can.
+
+*               @WassimAarab08
+
+# The core of the project.
+src/scan2epub/domain/     @WassimAarab08
+src/scan2epub/application/ @WassimAarab08
+src/scan2epub/infrastructure/ @WassimAarab08
+
+# The interfaces.
+src/scan2epub/cli/        @WassimAarab08
+src/scan2epub/api/        @WassimAarab08
+web/                      @WassimAarab08
+
+# The continuous integration and the governance.
+.github/                  @WassimAarab08
