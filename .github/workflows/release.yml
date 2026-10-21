@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to release, for example v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}
+
+jobs:
+  release:
+    name: Publish the release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read the changelog
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          {
+            echo "version=${VERSION}"
+            echo "tag=${GITHUB_REF_NAME}"
+          } >> "$GITHUB_OUTPUT"
+          # The section of the changelog that belongs to the release.
+          SECTION=$(awk -v tag="$GITHUB_REF_NAME" '
+            $0 ~ "^## \\[" tag "\\]" {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md)
+          printf '%s\n' "$SECTION" > RELEASE_NOTES.md
+          echo "## $GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "$SECTION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the CPU image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.cpu
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:cpu
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.changelog.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push the GPU image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.gpu
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:gpu
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.changelog.outputs.version }}-gpu
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          name: ${{ steps.changelog.outputs.tag }}
+          body_path: ${{ github.workspace }}/RELEASE_NOTES.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true
