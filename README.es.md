@@ -37,6 +37,8 @@ material **en español** de los siglos XVIII y XIX.
 
 > El mismo contenido: la cabecera desapareció, la `ſ` se normalizó, las
 > palabras partidas se unieron y el párrafo fluye con naturalidad.
+>
+> Las imágenes se generan con `uv run python scripts/make_readme_images.py`.
 
 ## Instalación rápida
 

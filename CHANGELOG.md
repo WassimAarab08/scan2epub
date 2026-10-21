@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the report is shown with the result of the conversion.
   - Structured logging with automatic redaction of the credentials.
   - `config.toml` support with environment variable overrides.
-  - 136 tests, 88 % of coverage.
+  - 139 tests, 88 % of coverage.
 
 [Unreleased]: https://github.com/WassimAarab08/scan2epub/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/WassimAarab08/scan2epub/releases/tag/v0.1.0
