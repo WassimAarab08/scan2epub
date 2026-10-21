@@ -150,11 +150,6 @@ def normalize_text(text: str) -> str:
     return "\n".join(lines)
 
 
-def is_ligature_free(text: str) -> bool:
-    """Whether ``text`` contains no long s and no Latin ligature."""
-    return "ſ" not in text and not any(lig in text for lig in LIGATURE_MAP)
-
-
 def folded(text: str) -> str:
     """Return a comparison key used to detect repeated running heads."""
     normalized = unicodedata.normalize("NFKD", text)

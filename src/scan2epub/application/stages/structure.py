@@ -9,7 +9,6 @@ known structural keyword).
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 
 from scan2epub.application.stages.headings import classify_heading
 from scan2epub.domain.models import (
@@ -21,16 +20,7 @@ from scan2epub.domain.models import (
     TextBlock,
 )
 
-__all__ = ["StructureResult", "classify_heading", "structure_book"]
-
-
-@dataclass(frozen=True, slots=True)
-class StructureResult:
-    """The outcome of the structuring pass."""
-
-    book: Book
-    headings: int = 0
-    chapters: int = 0
+__all__ = ["classify_heading", "structure_book"]
 
 
 def _classify_blocks(pages: Sequence[PageContent]) -> list[TextBlock]:

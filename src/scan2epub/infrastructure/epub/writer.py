@@ -104,6 +104,7 @@ class _Note:
 
     marker: str
     text: str
+    full_text: str
     anchor: str
     page: int
 
@@ -124,12 +125,6 @@ class _ChapterPlan:
     chapter: Chapter
     file_name: str
     headings: tuple[_Heading, ...]
-
-
-def _slug(text: str, fallback: str) -> str:
-    """Turn a title into a stable, XML-safe identifier."""
-    normalized = re.sub(r"[^0-9A-Za-z]+", "-", text.strip().lower()).strip("-")
-    return normalized[:60] or fallback
 
 
 def _escape(text: str) -> str:
@@ -281,9 +276,7 @@ class EpubWriter:
             f"    <dc:language>{_escape(language)}</dc:language>",
         ]
         if metadata.author:
-            lines.append('    <dc:creator id="creator">')
-            lines.append(f"      {_escape(metadata.author)}")
-            lines.append("    </dc:creator>")
+            lines.append(f'    <dc:creator id="creator">{_escape(metadata.author)}</dc:creator>')
             lines.append(
                 '    <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>'
             )
@@ -440,9 +433,9 @@ class EpubWriter:
                     )
                 else:
                     # No reference could be placed in the body text: keep the
-                    # note as a plain paragraph so that the document stays
-                    # symmetric.
-                    lines.append(f"      <p>{_escape(note.text)}</p>")
+                    # note as a plain paragraph, with its number, so that the
+                    # document stays symmetric.
+                    lines.append(f"      <p>{_escape(note.full_text)}</p>")
 
         lines.append("    </section>")
         lines.append("  </body>")
@@ -450,7 +443,13 @@ class EpubWriter:
         return "\n".join(lines) + "\n"
 
     def _collect_notes(self, chapter: Chapter) -> list[_Note]:
-        """Extract the footnotes of a chapter."""
+        """Extract the footnotes of a chapter.
+
+        The identifier of a note is the position of the note in the chapter,
+        never its number: a book that numbers its notes again on every page
+        would otherwise produce duplicate identifiers, and duplicate
+        identifiers are invalid XML.
+        """
         notes: list[_Note] = []
         for block in chapter.blocks:
             if block.kind is not BlockKind.FOOTNOTE:
@@ -467,7 +466,8 @@ class EpubWriter:
                 _Note(
                     marker=marker,
                     text=text,
-                    anchor=f"{chapter.id}-fn-{_slug(marker, str(len(notes) + 1))}",
+                    full_text=raw,
+                    anchor=f"{chapter.id}-fn-{len(notes) + 1}",
                     page=block.page,
                 )
             )
