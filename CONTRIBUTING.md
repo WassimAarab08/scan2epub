@@ -31,19 +31,37 @@ The project uses **trunk-based development** with a single long-lived branch.
 
 The rules:
 
-1. **Never push to `main`.** `main` is protected: a direct push is refused.
+1. **Never push to `main`.** `main` is protected: a direct push is refused,
+   for everybody, including the maintainers.
 2. **Every change goes through a pull request**, however small it is. A
    one-line typo fix is a pull request too.
 3. **The CI must be green** before a pull request can be merged. The checks
    that gate the merge are `quality` (lint, types, tests), `epub` (the
    generated book passes EPUBCheck) and `browser` (the book renders in a real
-   browser and opens in foliate-js).
-4. **A pull request needs one review** from a maintainer. A pull request that
-   only fixes the formatting does not need one.
-5. **Do not force-push a branch that has a review in progress.** Use
-   `git push --force-with-lease` on your own branch.
-6. **The history is linear.** The maintainers squash-merge, with the title of
+   browser and opens in foliate-js). They must also be **up to date with
+   `main`**: rebase and the CI runs again.
+4. **The history is linear.** The maintainers squash-merge, with the title of
    the pull request, which is a Conventional Commit.
+5. **Every commit is signed off.** Add the `Signed-off-by` line with
+   `git commit -s`, or with the "certify the origin" checkbox of the GitHub
+   web editor. It is the [Developer Certificate of Origin](https://developercertificate.org/).
+6. **Do not force-push a branch that has a review in progress.** Use
+   `git push --force-with-lease` on your own branch.
+7. **The conversation must be resolved** before the merge: every comment of
+   the review has to be answered.
+
+### About the review
+
+A review is **requested** on every pull request — the `CODEOWNERS` file names
+who reviews which area, and the pull request template has a checklist — but it
+is not **required** by the branch protection yet, because the project has only
+one maintainer and a pull request cannot be approved by its own author.
+
+As soon as there is a second maintainer, the protection will require one
+approving review, and this paragraph will be updated. In the meantime, a
+pull request that touches an unfamiliar area is better reviewed by somebody
+before it is merged: say so in the pull request, and the maintainer will wait
+for it.
 
 ### Naming the branches
 
@@ -66,8 +84,13 @@ cd scan2epub
 git remote add upstream https://github.com/WassimAarab08/scan2epub.git
 git checkout -b fix/whatever-the-problem-is
 # … your changes …
+git commit -s -m "fix(ocr): whatever the change is"
 git push -u origin fix/whatever-the-problem-is
 ```
+
+The `-s` adds the `Signed-off-by` line that the project requires. The
+repository also carries a [`.gitmessage`](.gitmessage) template that explains
+it, and GitHub shows it in the web editor.
 
 Then open the pull request against `main` from the GitHub page, or:
 
@@ -206,6 +229,16 @@ fix(epub): write mimetype as the first uncompressed ZIP entry
 docs(readme): add the before/after comparison
 test(clean): cover hyphen re-joining across page boundaries
 ```
+
+Every commit must also carry the sign-off line:
+
+```
+Signed-off-by: Your Name <you@example.com>
+```
+
+Use `git commit -s` to add it. It is the same as ticking "certify the origin"
+in the GitHub web editor, and it is what the
+[Developer Certificate of Origin](https://developercertificate.org/) asks for.
 
 Keep commits small and atomic. A commit should build and pass the gates on its
 own.
