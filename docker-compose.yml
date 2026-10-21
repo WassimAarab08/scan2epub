@@ -28,23 +28,20 @@ services:
       - scan2epub-data:/data
     restart: unless-stopped
 
-  worker:
-    image: ghcr.io/wassimaarab08/scan2epub:cpu
-    profiles: ["cpu", "gpu"]
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.cpu
-    command: ["worker"]
-    environment:
-      SCAN2EPUB_LOG_LEVEL: "INFO"
-      SCAN2EPUB_CACHE_DIR: /data/cache
-      SCAN2EPUB_WORK_DIR: /data/work
-      SCAN2EPUB_DATABASE: /data/jobs.db
-    volumes:
-      - scan2epub-data:/data
-    depends_on:
-      - api
-    restart: unless-stopped
+  # The job worker arrives with the queue, in Phase 4. Until then the
+  # conversion runs in the process that receives the request.
+  #
+  #   worker:
+  #     image: ghcr.io/wassimaarab08/scan2epub:cpu
+  #     profiles: ["cpu", "gpu"]
+  #     command: ["worker"]
+  #     environment:
+  #       SCAN2EPUB_DATABASE: /data/jobs.db
+  #     volumes:
+  #       - scan2epub-data:/data
+  #     depends_on:
+  #       - api
+  #     restart: unless-stopped
 
   api-gpu:
     build:

@@ -36,6 +36,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         tesseract-ocr \
         tesseract-ocr-spa \
+        tesseract-ocr-spa-old \
         tesseract-ocr-eng \
         tesseract-ocr-fra \
         tesseract-ocr-deu \
@@ -43,6 +44,7 @@ RUN apt-get update \
         libglib2.0-0 \
         default-jre-headless \
         curl \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # EPUBCheck validates the generated books.

@@ -79,7 +79,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng
+            tesseract-ocr tesseract-ocr-spa tesseract-ocr-spa-old tesseract-ocr-eng
           tesseract --list-langs
 
       - name: Set up Java

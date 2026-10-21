@@ -48,11 +48,13 @@ RUN apt-get update \
         python3.12-venv \
         tesseract-ocr \
         tesseract-ocr-spa \
+        tesseract-ocr-spa-old \
         tesseract-ocr-eng \
         libgl1 \
         libglib2.0-0 \
         default-jre-headless \
         curl \
+        unzip \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.12 /usr/bin/python \
     && curl -sSL -o /tmp/epubcheck.zip \
