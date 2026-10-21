@@ -60,6 +60,16 @@ uv run scan2epub convert libro.pdf -o libro.epub
 
 Requires Python 3.12+ and (for the default engine) the `tesseract` binary.
 
+### The web interface
+
+```bash
+uv run scan2epub serve --host 127.0.0.1 --port 8000
+```
+
+<http://localhost:8000> offers a small page that uploads a PDF, converts it
+and offers the EPUB for download. The same conversion is available over the
+REST API, documented at `/docs`.
+
 ## CLI
 
 ```bash

@@ -159,11 +159,65 @@ result = pipeline.run(BookMetadata(title="Mi libro"), Path("libro.epub"))
 print(result.validation.passed, result.page_count)
 ```
 
+## `scan2epub serve`
+
+Start the REST API, which exposes the same pipeline over HTTP.
+
+```bash
+scan2epub serve --host 127.0.0.1 --port 8000
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--host` | `127.0.0.1` | The address the service listens on. |
+| `--port` | `8000` | The port. |
+| `--reload` | off | Reload the code on every change. |
+| `--data-dir` | `.scan2epub` | Where the uploads and the results are written. |
+
+The service listens on the loopback address by default: put it behind a
+reverse proxy with TLS and authentication before exposing it.
+
+| Route | Method | Description |
+| --- | --- | --- |
+| `/` | `GET` | A small web page that converts a book. |
+| `/health` | `GET` | The version and the available engines. |
+| `/api/engines` | `GET` | The description of every engine. |
+| `/api/convert` | `POST` | Upload a PDF, get the summary and the download link. |
+| `/api/download/{job}/{name}` | `GET` | Download a generated EPUB. |
+| `/docs` | `GET` | The interactive documentation of the API. |
+| `/openapi.json` | `GET` | The OpenAPI schema. |
+
+```bash
+curl -F "file=@libro.pdf" -F "title=El libro" http://127.0.0.1:8000/api/convert
+```
+
+```json
+{
+  "title": "El libro",
+  "pages": 218,
+  "chapters": 14,
+  "size": 422145,
+  "duration_seconds": 96.4,
+  "removed_running_heads": ["HISTORIA DE LA IMPRENTA EN ESPAÑA"],
+  "removed_page_numbers": 218,
+  "joined_hyphens": 1342,
+  "merged_paragraphs": 2871,
+  "footnotes": 96,
+  "epub_valid": true,
+  "epub_warnings": [],
+  "download": "/api/download/scan2epub-abc123/libro.epub"
+}
+```
+
+> **Status: preview.** The queue of jobs, the worker process and the progress
+> by SSE arrive in Phase 4. For now the conversion runs in the process that
+> receives the request.
+
 ## The commands of the later phases
 
 | Command | Phase |
 | --- | --- |
 | `scan2epub estimate` | 3 — the cost of a run with a paid provider |
 | `scan2epub eval` | 2 — the CER and WER of every engine |
-| `scan2epub serve` | 4 — the REST API and the job queue |
+| `scan2epub worker` | 4 — the job worker of the queue |
 | `scan2epub samples fetch` | 2 — the public-domain evaluation corpus |

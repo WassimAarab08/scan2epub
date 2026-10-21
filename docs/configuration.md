@@ -104,6 +104,9 @@ scan2epub convert libro.pdf -o libro.epub --lang "spa+spa_old+eng"
 The `*.traineddata` files live in the `tessdata` directory. Point
 `TESSDATA_PREFIX` at it, or set `tessdata_dir` in the configuration file.
 
+The Debian and Ubuntu packages that carry the legacy Spanish data are
+`tesseract-ocr-spa-old`; they are already installed in the container images.
+
 | Language | Code |
 | --- | --- |
 | Spanish (modern) | `spa` |

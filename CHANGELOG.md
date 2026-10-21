@@ -42,13 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the report is shown with the result of the conversion.
   - Structured logging with automatic redaction of the credentials.
   - `config.toml` support with environment variable overrides.
-  - 192 tests, 89 % of coverage.
+  - 203 tests, 89 % of coverage.
 
 ### Added
 - **Browser test suite** driven by Playwright and Chromium. The generated book
   is opened in a real browser and in **foliate-js**, the reference EPUB 3
   reader, and checked for reflow, working navigation, linked footnotes, and
   the metadata and table of contents that the reader builds.
+- **Web interface and REST API preview.** `scan2epub serve` starts a FastAPI
+  service that exposes the same pipeline over HTTP: a small web page that
+  uploads a PDF, the routes `/health`, `/api/engines`, `/api/convert` and
+  `/api/download`, and the OpenAPI documentation at `/docs`.
 - Complete documentation: `docs/architecture.md`, `docs/adding-an-engine.md`,
   `docs/configuration.md`, `docs/usage.md`, `docs/testing.md`,
   `docs/epub-layout.md`, `docs/benchmarks.md` and `docs/naming.md`.
@@ -57,6 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and GPU images.
 - `docker/Dockerfile.cpu`, `docker/Dockerfile.gpu` and a `docker-compose.yml`
   with the `cpu`, `gpu` and `ollama` profiles.
+
+### Changed
+- The CLI and the API build the pipeline through a single factory, so an
+  engine is registered once and works everywhere.
 
 [Unreleased]: https://github.com/WassimAarab08/scan2epub/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/WassimAarab08/scan2epub/releases/tag/v0.1.0

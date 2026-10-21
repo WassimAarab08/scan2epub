@@ -59,6 +59,7 @@ dev = [
   "pyright>=1.1.390",
   "respx>=0.22",
   "freezegun>=1.5",
+  "httpx2>=2.16",
 ]
 
 [project.scripts]
@@ -79,6 +80,7 @@ dev = [
   "respx>=0.22",
   "freezegun>=1.5",
   "playwright>=1.64.0",
+  "httpx2>=2.16",
 ]
 
 [tool.hatch.build.targets.wheel]
