@@ -152,6 +152,19 @@ regions of a page.
    an EPUB note. The very same note, with the very same number, on three
    pages or more is boilerplate and is removed.
 
+### How a heading is recognised
+
+A block becomes a heading only when several signals agree. A structural
+keyword alone is not enough, because "Book the tickets" and "Part of the
+problem" are ordinary sentences:
+
+| Signal | Rule |
+| --- | --- |
+| A structural keyword | `CAPITULO`, `Libro`, `Chapter`, `Book`, `Part`, `Introduction`… **followed by a number, a Roman numeral or a capitalised word**. |
+| A Roman numeral alone | `IV`, `XII` |
+| All capitals | The line is in capitals and is not a shouted sentence. |
+| The geometry | The line is short, centred and in the upper half of the page. |
+
 Every rule is a pure function of the recognised text and its geometry. Running
 the pipeline twice gives the same book, and the test suite asserts it.
 
@@ -168,9 +181,11 @@ sha256(stage ‖ stage_version ‖ sha256(input) ‖ sha256(relevant_config))
 - The **blob store** (`blobs/ab/cd/<sha256>`) stores the artefacts themselves:
   the page images and the recognition results.
 
-Because the key includes the configuration, changing the resolution or the
-cleaning options invalidates **only** the stages that depend on them. A job
-that was interrupted at page 512 continues at page 512.
+Because the key includes the configuration and the settings of the engine,
+changing the resolution, the cleaning options **or the language of the OCR**
+invalidates **only** the stages that depend on them. A job that was
+interrupted at page 512 continues at page 512, and a book that was recognised
+in English is never served again when the language changes to Spanish.
 
 ## The EPUB
 

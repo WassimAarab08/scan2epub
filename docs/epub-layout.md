@@ -60,9 +60,7 @@ The package document. It carries the metadata and the manifest.
     <dc:identifier id="pub-id">urn:uuid:9b1c...</dc:identifier>
     <dc:title>Historia de la imprenta en España</dc:title>
     <dc:language>es</dc:language>
-    <dc:creator id="creator">
-      Anónimo
-    </dc:creator>
+    <dc:creator id="creator">Anónimo</dc:creator>
     <meta refines="#creator" property="role" scheme="marc:relators">aut</meta>
     <dc:date>1765</dc:date>
     <meta property="dcterms:modified">2026-10-21T09:00:00Z</meta>
@@ -186,8 +184,13 @@ y su continuacion.</p>
 </aside>
 ```
 
+The identifier of a note is **the position of the note in the chapter**, never
+its number: a book that numbers its notes again on every page would otherwise
+produce duplicate identifiers, and duplicate identifiers are invalid XML.
+
 When the number cannot be found in the body text, the note is kept as a plain
-paragraph instead: an orphan note is better than a broken link.
+paragraph — with its number — instead of an `aside`: an orphan note is better
+than a broken link.
 
 ## The figures
 

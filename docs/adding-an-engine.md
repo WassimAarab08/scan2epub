@@ -39,6 +39,14 @@ class MyEngine:
             )
             for index, block in enumerate(raw)
         ]
+
+    def describe(self) -> dict[str, object]:
+        """Return the settings that change the result.
+
+        The pipeline hashes this dictionary to build the key of the cache, so
+        two runs that use different settings never share their artefacts.
+        """
+        return {"engine": self.name, "model": self.model, "lang": self.lang}
 ```
 
 That is the whole adapter. The rules:
@@ -49,6 +57,7 @@ That is the whole adapter. The rules:
 | Normalise the coordinates | `BBox.from_pixels` does it for you. |
 | Return the blocks in reading order | The structure stage relies on it. |
 | Set `page=image.index` | The review view needs to know the page. |
+| Describe the settings | Two runs with different settings must not share the cache. |
 | Do not rewrite the text | That is the corrector's job, and it is guarded. |
 
 ## The contract of a text corrector
@@ -89,6 +98,9 @@ The corrector is **not** trusted. The application layer measures the distance
 between the original and the correction and throws it away when it drifts too
 far. That is why `DiffEntry` carries the distance: the guardrail needs it,
 and the user needs the diffs to review what changed.
+
+Use `scan2epub.domain.distance.levenshtein_bounded` to measure the distance;
+it is banded, so it stays fast on long paragraphs.
 
 ## Registering the adapter
 
