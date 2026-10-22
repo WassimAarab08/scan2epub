@@ -176,6 +176,26 @@ def test_a_footnote_without_a_marker_stays_a_paragraph(tmp_path: Path) -> None:
     assert "Nota del autor." in document
 
 
+def test_the_notes_sit_in_a_section_of_their_own(tmp_path: Path) -> None:
+    """The notes are set apart, under a title in the language of the book."""
+    target = tmp_path / "book.epub"
+    book = _book(
+        Chapter(
+            id="chapter-1",
+            title="Titulo",
+            blocks=(
+                _block("El texto principal y su continuacion.", order=0, page=0),
+                _block("1 Nota del autor.", order=1, page=0, kind=BlockKind.FOOTNOTE),
+            ),
+        )
+    )
+    EpubWriter().write(book, target)
+    with zipfile.ZipFile(target) as archive:
+        document = _read(archive, "EPUB/text/chapter-001.xhtml")
+    assert 'epub:type="endnotes"' in document
+    assert ">Notas<" in document
+
+
 def test_the_headings_of_a_chapter_are_navigable(tmp_path: Path) -> None:
     """A section heading appears in the table of contents."""
     target = tmp_path / "book.epub"

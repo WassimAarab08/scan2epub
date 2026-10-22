@@ -71,6 +71,20 @@ aside {
   page-break-inside: avoid;
   break-inside: avoid;
 }
+.notes {
+  margin-top: 2em;
+  padding-top: 0.5em;
+  border-top: 1px solid currentColor;
+}
+.notes-title {
+  text-align: left;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+.notes p {
+  text-indent: 0;
+  margin-block: 0.6em;
+}
 """
 
 _CONTAINER_XML = """\
@@ -85,6 +99,17 @@ _CONTAINER_XML = """\
 _FOOTNOTE_MARKER_RE = re.compile(
     r"^\s*[\(\[]?([0-9]{1,3}|[ivxlcdm]{1,7})[\)\].:]?\s+", re.IGNORECASE
 )
+
+#: The title of the section of the notes, in the language of the book.
+_NOTES_TITLES = {
+    "ca": "Notes",
+    "de": "Anmerkungen",
+    "en": "Notes",
+    "es": "Notas",
+    "fr": "Notes",
+    "it": "Note",
+    "pt": "Notas",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,23 +449,32 @@ class EpubWriter:
             first_paragraph = False
 
         if notes:
-            lines.append("      <hr/>")
+            lines.append('      <section epub:type="endnotes" class="notes">')
+            lines.append(
+                f'        <h2 class="notes-title">{_escape(self._notes_title(language))}</h2>'
+            )
             for note in notes:
                 if note.anchor in used_notes:
                     lines.append(
-                        f'      <aside epub:type="footnote" id="{note.anchor}">'
+                        f'        <aside epub:type="footnote" id="{note.anchor}">'
                         f"<p>{_escape(note.text)}</p></aside>"
                     )
                 else:
                     # No reference could be placed in the body text: keep the
                     # note as a plain paragraph, with its number, so that the
                     # document stays symmetric.
-                    lines.append(f"      <p>{_escape(note.full_text)}</p>")
+                    lines.append(f"        <p>{_escape(note.full_text)}</p>")
+            lines.append("      </section>")
 
         lines.append("    </section>")
         lines.append("  </body>")
         lines.append("</html>")
         return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _notes_title(language: str) -> str:
+        """Return the title of the section of the notes."""
+        return _NOTES_TITLES.get(language.split("-", maxsplit=1)[0].lower(), "Notes")
 
     def _collect_notes(self, chapter: Chapter) -> list[_Note]:
         """Extract the footnotes of a chapter.
