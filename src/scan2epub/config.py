@@ -80,6 +80,7 @@ class GeneralConfig(_Section):
     author: str | None = None
     year: str | None = None
     validate_epub: bool = True
+    cache_dir: str | None = None
 
 
 class PreprocessConfig(_Section):
@@ -142,6 +143,15 @@ class Config:
     def corrector_provider(self, name: str) -> OcrProviderConfig:
         """Return the configuration of the text corrector ``name``."""
         return self.correctors.get(name, OcrProviderConfig())
+
+    @property
+    def cache_directory(self) -> Path:
+        """Return the directory where the artefacts are cached."""
+        if self.general.cache_dir:
+            return Path(self.general.cache_dir)
+        base = os.environ.get("XDG_CACHE_HOME")
+        root = Path(base) if base else Path.home() / ".cache"
+        return root / "scan2epub"
 
 
 def default_config_path() -> Path:

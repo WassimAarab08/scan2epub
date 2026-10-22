@@ -79,12 +79,13 @@ def main() -> None:
 
 def _register_commands() -> None:
     """Import and register every command module."""
-    from scan2epub.cli.commands import config, convert, doctor, serve  # noqa: PLC0415
+    from scan2epub.cli.commands import config, convert, doctor, eval, serve  # noqa: PLC0415
 
     app.command(name="convert")(handle_errors(convert.convert))
     app.command(name="doctor")(handle_errors(doctor.doctor))
     app.command(name="serve")(handle_errors(serve.serve))
     app.command(name="config")(handle_errors(config.config))
+    app.command(name="eval")(handle_errors(eval.eval))
 
 
 _register_commands()
