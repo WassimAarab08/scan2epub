@@ -26,7 +26,7 @@ def _free_port() -> int:
 
 
 @pytest.fixture(scope="module")
-def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+def server(tmp_path_factory: pytest.TempPathFactory, require_tesseract: None) -> Iterator[str]:
     """Start the API on a free port and return its base URL."""
     import uvicorn
 

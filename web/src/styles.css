@@ -1,0 +1,68 @@
+/*
+ * The classes are found in the templates and in the components of `src`.
+ * The automatic detection is switched off, so the vendored libraries and the
+ * build output are never scanned.
+ */
+@import 'tailwindcss' source(none);
+@source './**/*.{html,ts}';
+
+/*
+ * The design tokens of the application. They are exposed to the templates as
+ * Tailwind utilities (for example `bg-paper` or `text-ink`), so the markup
+ * stays free of one-off CSS.
+ */
+@theme {
+  --color-paper: #faf7f1;
+  --color-paper-deep: #f2ebdd;
+  --color-card: #ffffff;
+  --color-ink: #221f1a;
+  --color-muted: #6d675c;
+  --color-line: #e6dfd1;
+  --color-accent: #2f6f4f;
+  --color-accent-deep: #235640;
+  --color-accent-soft: #e8f1eb;
+  --color-sepia: #f4e7cd;
+  --color-sepia-ink: #4a3a24;
+  --color-danger: #a4342c;
+
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  app-root {
+    display: block;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /*
+   * The reader of foliate-js fills the space that the shell leaves. The
+   * element is created by the library, so the rule cannot live in the
+   * component that uses it.
+   */
+  foliate-view {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}

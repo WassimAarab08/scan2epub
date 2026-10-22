@@ -1,0 +1,20 @@
+{
+  "/api": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  },
+  "/health": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  },
+  "/openapi.json": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  }
+}

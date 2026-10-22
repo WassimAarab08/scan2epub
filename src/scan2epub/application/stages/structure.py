@@ -9,8 +9,9 @@ known structural keyword).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
-from scan2epub.application.stages.headings import classify_heading
+from scan2epub.application.stages.headings import classify_heading, classify_page
 from scan2epub.domain.models import (
     BlockKind,
     Book,
@@ -24,20 +25,42 @@ __all__ = ["classify_heading", "structure_book"]
 
 
 def _classify_blocks(pages: Sequence[PageContent]) -> list[TextBlock]:
-    """Flatten the pages and mark the heading blocks."""
+    """Flatten the pages and mark the heading blocks.
+
+    The blocks of a page are classified together, because the typography of
+    the page (a title set in a bigger type than the body) is one of the
+    signals.
+    """
     blocks: list[TextBlock] = []
     for page in pages:
-        for block in page.blocks:
+        levels = classify_page(page.blocks)
+        for block, level in zip(page.blocks, levels, strict=True):
             candidate = block
+            if level is None:
+                blocks.append(candidate)
+                continue
             if candidate.kind is BlockKind.BODY:
-                detected = classify_heading(candidate)
-                if detected is not None:
-                    candidate = candidate.with_kind(BlockKind.HEADING).with_level(detected)
+                candidate = candidate.with_kind(BlockKind.HEADING).with_level(level)
             elif candidate.kind is BlockKind.HEADING and candidate.level == 0:
-                detected = classify_heading(candidate)
-                if detected is not None:
-                    candidate = candidate.with_level(detected)
+                candidate = candidate.with_level(level)
             blocks.append(candidate)
+    return blocks
+
+
+def _promote_the_title(blocks: list[TextBlock]) -> list[TextBlock]:
+    """Make sure that the book has a chapter-level heading.
+
+    A book whose headings were all taken as sections would end up as a
+    single chapter. The first heading is the title of the book, so it is
+    promoted to the chapter level.
+    """
+    if any(block.kind is BlockKind.HEADING and block.level == 1 for block in blocks):
+        return blocks
+    for index, block in enumerate(blocks):
+        if block.kind is BlockKind.HEADING:
+            promoted = list(blocks)
+            promoted[index] = block.with_level(1)
+            return promoted
     return blocks
 
 
@@ -59,7 +82,14 @@ def structure_book(
     Returns:
         The structured book.
     """
-    blocks = _classify_blocks(pages)
+    blocks = _promote_the_title(_classify_blocks(pages))
+
+    if not metadata.title.strip():
+        # The book titles itself: the first heading of the document is the
+        # title that the printer set, and the caller left the field empty.
+        first_heading = next((block for block in blocks if block.kind is BlockKind.HEADING), None)
+        if first_heading is not None:
+            metadata = replace(metadata, title=" ".join(first_heading.text.split()))
 
     chapter_starts: list[int] = [
         index

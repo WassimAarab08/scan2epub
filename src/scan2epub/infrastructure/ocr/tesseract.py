@@ -34,11 +34,14 @@ _WINDOWS_CANDIDATES = (
 
 
 def _configure_binary() -> None:
-    """Point pytesseract at the Tesseract binary, if it is not on ``PATH``."""
-    if getattr(pytesseract.pytesseract, "tesseract_cmd", ""):
-        return
-    found = shutil.which("tesseract")
-    if found:
+    r"""Point pytesseract at the Tesseract binary, if it is not on ``PATH``.
+
+    pytesseract defaults to the bare name ``tesseract``, which only works
+    when the binary is in the ``PATH``. On Windows the installer puts it in
+    ``C:\Program Files\Tesseract-OCR``, which is usually not in the
+    ``PATH`` of a terminal.
+    """
+    if shutil.which("tesseract"):
         return
     for candidate in _WINDOWS_CANDIDATES:
         if candidate.is_file():

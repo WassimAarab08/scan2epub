@@ -120,6 +120,34 @@ def test_a_book_without_headings_is_a_single_chapter() -> None:
     assert book.chapters[0].title == "Libro"
 
 
+def test_the_first_heading_titles_a_book_without_a_title() -> None:
+    """When the caller gives no title, the document gives it.
+
+    A title set in a bigger type than the body is the first heading of the
+    page, and the book takes its name from it.
+    """
+    pages = [
+        PageContent(
+            index=0,
+            blocks=(
+                _block("UN ASUNTO DE FAMILIA", top=0.20, bottom=0.28, order=0, page=0),
+                _block(
+                    "\n".join(["Una línea del cuerpo del libro."] * 20),
+                    top=0.35,
+                    bottom=0.75,
+                    order=1,
+                    page=0,
+                ),
+            ),
+        )
+    ]
+
+    book = structure_book(pages, BookMetadata(title="", language="es"))
+
+    assert book.metadata.title == "UN ASUNTO DE FAMILIA"
+    assert book.chapters[0].title == "UN ASUNTO DE FAMILIA"
+
+
 def test_the_content_before_the_first_chapter_becomes_the_front_matter() -> None:
     """The text before the first heading is kept."""
     pages = [

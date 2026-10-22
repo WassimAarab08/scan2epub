@@ -8,6 +8,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The conversion is a job, not a request.** `POST /api/jobs` queues a
+  conversion in SQLite, a worker runs it in the background, and
+  `GET /api/jobs/{id}/events` streams the progress as Server-Sent Events,
+  replaying the events that a client that arrives late has missed. The jobs
+  can be listed, cancelled and resumed.
+- **An Angular interface with the reader inside.** Upload by drag and drop,
+  the eight stages as they run, the result with its numbers and the EPUB
+  ready to download or to read without leaving the page. It is built with
+  standalone components and signals, and it talks to the API through the
+  development server proxy.
+- **A reader.** [foliate-js](https://github.com/johnfactotum/foliate-js)
+  (MIT) behind an adapter of our own: one page or a spread, a plain or a
+  book style, the type, the size, the leading, the margins and three themes,
+  and the reading progress kept in the browser.
+- **The reading mode.** A button takes the book to the whole screen: the
+  header of the application and the toolbar of the reader disappear, the
+  page keeps the window and a floating bar — faint until the pointer finds
+  it — gives the progress, the contents and the way out. The browser is
+  asked for the full screen, and leaving the full screen leaves the mode.
+- `scan2epub resume`: continues an interrupted conversion from its cache.
+- `scan2epub estimate`: the price of a run before it happens.
+- `scan2epub eval`: the CER and the WER of an engine against a reference
+  transcription.
+- The **PaddleOCR-VL**, **TeleOCR** and **Kraken** adapters, next to
+  Tesseract, behind the same `OcrEngine` port.
+- An **OpenCV layout analyser**: the columns, the figures and the zones of a
+  page, so a two-column scan is read in the right order.
+- The **LiteLLM corrector**, behind a guardrail that accepts a correction
+  only when its normalised edit distance stays below the configured
+  threshold, with the rejected ones counted and the original kept.
+- The cost of a run is estimated before it starts and the budget is a hard
+  limit: the pipeline stops instead of spending more.
+- A corpus of public-domain pages in `samples/`, with its reference
+  transcription.
+
+### Fixed
+- **The notes no longer run into the text.** The notes of a page are found
+  by their place — after a gap of more than a line, in the lower half of the
+  page, in the type of the body or in a smaller one — so a note whose number
+  the OCR lost is a note and no longer a paragraph glued to the sentence
+  above it. They are set apart at the end of their chapter, and a note that
+  carries no number is kept instead of being dropped.
+- **A paragraph no longer continues across a wide gap.** An OCR block that
+  follows a blank space of more than a line inside a page starts a paragraph
+  of its own.
+- **The title is the title.** The blocks of a page are classified together:
+  the first block in display type that is centred and narrower than the
+  measure titles the page, the byline below it is not a heading, and an
+  article whose title runs to twenty words is no longer taken for body text.
+- **A book without a title takes the name of its first heading**, and the
+  field of the title in the interface is a suggestion, no longer a value
+  taken from the name of the file.
+- **A page is never wider than it is tall.** The book keeps the proportions
+  of a printed page in a window of any size, in one page and in a spread.
+
+### Added
 - **The governance of the repository.** `main` is protected: no direct push,
   for anybody; the CI must be green **and** up to date; the history is
   linear; the branches are deleted after the merge; every comment of a

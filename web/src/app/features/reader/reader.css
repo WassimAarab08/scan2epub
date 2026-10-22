@@ -1,0 +1,30 @@
+/* The reader fills the space that the shell of the application leaves. */
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+/*
+ * The measure of a page follows the height of the window, so the book keeps
+ * the proportions of a printed page. Without this, a spread on a wide screen
+ * stretches its two columns until every page is wider than it is tall and the
+ * text becomes a single, very long line.
+ *
+ * A page of a book is about two thirds as wide as it is tall: 56 dvh for one
+ * page, twice that for a spread. The cap of 100% keeps a narrow window usable.
+ */
+.book-pages {
+  position: absolute;
+  inset: 0;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.book-pages[data-layout='single'] {
+  max-width: min(100%, 56dvh);
+}
+
+.book-pages[data-layout='spread'] {
+  max-width: min(100%, 112dvh);
+}

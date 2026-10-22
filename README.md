@@ -63,12 +63,20 @@ Requires Python 3.12+ and (for the default engine) the `tesseract` binary.
 ### The web interface
 
 ```bash
+# The API and the job queue
 uv run scan2epub serve --host 127.0.0.1 --port 8000
+
+# The Angular application, in another terminal
+cd web && npm install && npm start
 ```
 
-<http://localhost:8000> offers a small page that uploads a PDF, converts it
-and offers the EPUB for download. The same conversion is available over the
-REST API, documented at `/docs`.
+<http://127.0.0.1:4200> asks for a PDF, shows the eight stages as they run,
+and offers the finished book for download **or for reading in the page** —
+one page or a spread, a plain or a book style, the type and the theme of your
+choice, and a reading mode that takes the whole screen and hides every menu.
+The reading progress is kept in the browser. The same conversion is available
+over the REST API, documented at `/docs`: `POST /api/jobs` queues it and
+`GET /api/jobs/{id}/events` streams its progress.
 
 ## CLI
 
@@ -105,16 +113,18 @@ More examples in [`docs/usage.md`](docs/usage.md).
 - **Safe LLM post-correction.** Corrections that drift too far from the original
   (normalized edit distance) are rejected and the original is kept. Every diff
   is stored for review.
-- **Cost control.** Token and price estimation before a paid run, a hard
-  budget cap, retries with exponential backoff and rate limiting. API keys are
-  only read from environment variables and are never logged.
+- **Cost control.** Token and price estimation before a paid run and a hard
+  budget cap: the run stops instead of spending more. API keys are only read
+  from environment variables and are never logged.
 - **Resumable.** Every stage is cached per page, keyed by content hash, so an
   interrupted 800-page job continues where it stopped.
 - **Hand-written EPUB 3.** No `EbookLib`. The CSS is minimal and never forces a
   font or a font size, so reader preferences win.
-- **Own reader.** An Angular web app with drag-and-drop upload, per-page
-  side-by-side review against the scan, and an integrated reader with
-  font/size/line-height/margin controls and light/dark/sepia themes.
+- **Own reader.** An Angular application with drag-and-drop upload, the live
+  stages of the conversion, and an integrated reader built on foliate-js:
+  font, size, line height, margins, light/dark/sepia themes, a plain or a book
+  style, one page or a spread, the saved progress and a reading mode that
+  gives the book the whole screen.
 
 ## Architecture
 
@@ -160,9 +170,10 @@ src/scan2epub/
 ├── domain/           # Pure models and ports (no I/O, no framework imports)
 ├── application/      # Pipeline stages, cache, job orchestration
 ├── infrastructure/   # Adapters: OCR, correction, imaging, PDF, EPUB, storage
-├── api/              # FastAPI app, routers, SSE, worker     (Phase 4)
+├── api/              # FastAPI app, routers, SSE, worker
 ├── cli/              # Typer commands
-└── eval/             # CER / WER metrics and benchmark runner (Phase 2)
+└── eval/             # CER / WER metrics and benchmark runner
+web/                  # Angular interface with the integrated reader
 ```
 
 ## Testing
@@ -198,10 +209,10 @@ The full plan, with the state of every piece, is in
 | --- | --- | --- |
 | 0 — Repository | ✅ 100 % | Repository, licence, documentation, CI, protected `main`. |
 | 1 — MVP | ✅ 100 % | `scan2epub convert`: Tesseract → deterministic cleaning → a valid EPUB 3. |
-| 2 — Local models | ◔ 25 % | The cache is done; the vision-language engines, the layout analyser and the CER/WER evaluation are not. |
-| 3 — Remote models | ○ 0 % | LiteLLM: remote OCR, LLM correction with guardrails, cost control. |
-| 4 — Service | ◔ 25 % | The REST API exists; the queue, the worker and the progress by SSE do not. |
-| 5 — Web interface | ○ 0 % | The Angular application, the page-by-page review, the integrated reader. |
+| 2 — Local models | ◕ 90 % | The layout analyser, the vision-language engines, the resume and the CER/WER evaluation are done; the benchmark table has no numbers yet. |
+| 3 — Remote models | ◕ 75 % | The LiteLLM corrector behind the guardrail, the modernisation, the cost estimate and the hard budget are done; a remote OCR adapter and the retries are not. |
+| 4 — Service | ✅ 100 % | The API, the SQLite queue, the worker, the progress by SSE and the endpoints to list, cancel and resume. |
+| 5 — Web interface | ◕ 80 % | The Angular application, the upload, the live stages and the integrated reader are done; the review view is not. |
 | 6 — Release | ◔ 50 % | The images and the CI are done; the v0.1.0 release is not. |
 
 **Contributions are welcome.** The issues labelled
@@ -215,6 +226,7 @@ OCR engine in fewer than fifty lines.
 | Document | Contents |
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model, the safety of the corrector |
+| [`docs/web.md`](docs/web.md) | The job API, the stream of events and the reader |
 | [`docs/roadmap.md`](docs/roadmap.md) | What is done, what is not, and where you can help |
 | [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` in under 50 lines |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, environment variables, providers |
