@@ -81,6 +81,7 @@ class GeneralConfig(_Section):
     year: str | None = None
     validate_epub: bool = True
     cache_dir: str | None = None
+    max_cost_usd: float | None = Field(default=None, ge=0.0)
 
 
 class PreprocessConfig(_Section):
@@ -109,6 +110,8 @@ class CleanConfig(_Section):
     join_paragraphs: bool = True
     detect_footnotes: bool = True
     keep_footnotes_inline: bool = False
+    max_correction_distance: float = Field(default=0.12, ge=0.0, le=1.0)
+    max_correction_length_change: float = Field(default=0.25, ge=0.0, le=1.0)
 
 
 class OcrProviderConfig(_Section):

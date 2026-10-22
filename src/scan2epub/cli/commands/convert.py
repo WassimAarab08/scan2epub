@@ -59,7 +59,6 @@ class _ConsoleReporter:
 
 
 def _build_metadata(
-    source: Path,
     general: GeneralConfig,
     title: str | None,
     author: str | None,
@@ -67,10 +66,9 @@ def _build_metadata(
     ocr_language: str,
 ) -> BookMetadata:
     """Derive the book metadata from the file name and the options."""
-    resolved_title = (
-        title or general.title or source.stem.replace("_", " ").replace("-", " ").strip()
-    )
-    resolved_title = resolved_title or "Libro sin título"
+    # An empty title is not a mistake: the structure stage titles the book
+    # with the first heading of the document.
+    resolved_title = title or general.title or ""
     language = general.output_language or output_language_for(ocr_language, general.language)
     return BookMetadata(
         title=resolved_title,
@@ -187,7 +185,7 @@ def convert(
     if ocr_language != config.general.language:
         config = with_language(config, ocr_language)
     engine = build_ocr_engine(config, language=ocr_language)
-    metadata = _build_metadata(source, config.general, title, author, year, ocr_language)
+    metadata = _build_metadata(config.general, title, author, year, ocr_language)
 
     cache = None if no_cache else FileCache(cache_root)
     pipeline = Pipeline(

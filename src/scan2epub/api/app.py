@@ -8,20 +8,26 @@ arrive in Phase 4.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import tempfile
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from scan2epub import __version__
+from scan2epub.api.worker import Worker
 from scan2epub.application.factory import available_engines, build_pipeline, with_language
 from scan2epub.config import Config, load_config
 from scan2epub.domain.models import BookMetadata
 from scan2epub.errors import Scan2EpubError
+from scan2epub.infrastructure.storage.sqlite_jobs import Job, JobStore
 
 __all__ = ["create_app"]
 
@@ -73,6 +79,18 @@ class ConvertResponse(BaseModel):
     epub_valid: bool = True
     epub_warnings: list[str] = Field(default_factory=list)
     download: str = ""
+
+
+class JobResponse(BaseModel):
+    """The state of a job of the queue."""
+
+    id: str
+    status: str
+    created_at: str = ""
+    updated_at: str = ""
+    error: str | None = None
+    download: str | None = None
+    summary: dict[str, Any] | None = None
 
 
 def _index_page() -> str:
@@ -224,7 +242,7 @@ def _convert(
             cache_dir=work / "cache",
         )
         metadata = BookMetadata(
-            title=title or stem.replace("_", " ").replace("-", " ").strip() or "Libro",
+            title=title or "",
             author=author or "",
             language=effective.general.output_language or effective.general.language or "es",
             year=year,
@@ -238,7 +256,7 @@ def _convert(
         raise HTTPException(status_code=500, detail=f"The conversion failed: {exc}") from exc
 
     return ConvertResponse(
-        title=metadata.title,
+        title=result.book.metadata.title or metadata.title,
         pages=result.page_count,
         chapters=len(result.book.chapters),
         size=result.epub_size,
@@ -283,6 +301,19 @@ def create_app(config: Config | None = None) -> FastAPI:
     """
     settings = config or load_config()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    store = JobStore(Path(os.environ.get("SCAN2EPUB_DATABASE", str(DATA_DIR / "jobs.db"))))
+    worker = Worker(store, settings, work_dir=DATA_DIR / "work")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+        """Run the worker and close the database when the service stops."""
+        thread = worker.start()
+        try:
+            yield
+        finally:
+            worker.stop()
+            thread.join(timeout=5)
+            store.close()
 
     app = FastAPI(
         title="scan2epub",
@@ -292,7 +323,10 @@ def create_app(config: Config | None = None) -> FastAPI:
             "The whole conversion runs locally. No API key and no network "
             "access are needed for the default engine."
         ),
+        lifespan=lifespan,
     )
+    app.state.job_store = store
+    app.state.worker = worker
 
     @app.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
@@ -329,6 +363,60 @@ def create_app(config: Config | None = None) -> FastAPI:
         """Serve a generated EPUB."""
         return _download(job, name)
 
+    @app.post("/api/jobs", response_model=JobResponse, status_code=201, tags=["jobs"])
+    def create_job(
+        file: Annotated[UploadFile, File(description="The scanned PDF.")],
+        title: Annotated[str | None, Form()] = None,
+        author: Annotated[str | None, Form()] = None,
+        year: Annotated[str | None, Form()] = None,
+        language: Annotated[str | None, Form()] = None,
+    ) -> JobResponse:
+        """Queue a conversion and return the job.
+
+        The answer comes back at once: the work is done in the background and
+        the progress is published on the stream of the events of the job.
+        """
+        if file.content_type not in ACCEPTED_TYPES:
+            raise HTTPException(status_code=415, detail="The file must be a PDF.")
+        stem = Path(file.filename or "libro").stem[:80]
+        staging = Path(tempfile.mkdtemp(prefix="scan2epub-", dir=str(DATA_DIR)))
+        source = staging / f"{stem}.pdf"
+        _store_upload(file, source)
+
+        job = store.create(
+            str(source),
+            {
+                "title": title or "",
+                "author": author or "",
+                "year": year,
+                "language": language or settings.general.language,
+            },
+        )
+        # The file is moved under the directory of the job, so that the link
+        # of the download points at it.
+        home = DATA_DIR / job.id
+        home.mkdir(parents=True, exist_ok=True)
+        final_source = home / f"{stem}.pdf"
+        source.replace(final_source)
+        output = home / f"{stem}.epub"
+        options = {
+            "title": title or "",
+            "author": author or "",
+            "year": year,
+            "language": language or settings.general.language,
+            "source": str(final_source),
+            "output": str(output),
+        }
+        store.update(job.id, source=str(final_source), options=options)
+        return JobResponse(
+            id=job.id,
+            status=job.status.value,
+            created_at=job.created_at,
+            download=f"/api/download/{job.id}/{output.name}",
+        )
+
+    _register_job_routes(app, store, worker)
+
     @app.exception_handler(Scan2EpubError)
     def handle_scan2epub_error(
         request: Any,  # noqa: ARG001, ANN401 - the signature is imposed by FastAPI
@@ -338,3 +426,123 @@ def create_app(config: Config | None = None) -> FastAPI:
         return JSONResponse(status_code=400, content={"detail": str(exc)})
 
     return app
+
+
+def _register_job_routes(app: FastAPI, store: JobStore, worker: Worker) -> None:
+    """Register the routes of the queue of jobs."""
+
+    @app.get("/api/jobs", response_model=list[JobResponse], tags=["jobs"])
+    def list_jobs(limit: Annotated[int, Query(ge=1, le=500)] = 50) -> list[JobResponse]:
+        """List the jobs, the newest first."""
+        return [_job_response(job) for job in store.list(limit)]
+
+    @app.get("/api/jobs/{job_id}", response_model=JobResponse, tags=["jobs"])
+    def get_job(job_id: str) -> JobResponse:
+        """Return one job."""
+        job = store.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="The job was not found.")
+        return _job_response(job)
+
+    @app.delete("/api/jobs/{job_id}", response_model=JobResponse, tags=["jobs"])
+    def cancel_job(job_id: str) -> JobResponse:
+        """Cancel a job."""
+        if not store.cancel(job_id):
+            raise HTTPException(status_code=409, detail="The job cannot be cancelled.")
+        job = store.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="The job was not found.")
+        return _job_response(job)
+
+    @app.post("/api/jobs/{job_id}/resume", response_model=JobResponse, tags=["jobs"])
+    def resume_job(job_id: str) -> JobResponse:
+        """Put a job back in the queue."""
+        if not store.requeue(job_id):
+            raise HTTPException(status_code=409, detail="The job cannot be resumed.")
+        job = store.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="The job was not found.")
+        return _job_response(job)
+
+    @app.get("/api/jobs/{job_id}/events", tags=["jobs"])
+    def job_events(job_id: str) -> StreamingResponse:
+        """Stream the progress of a job with Server-Sent Events."""
+        if store.get(job_id) is None:
+            raise HTTPException(status_code=404, detail="The job was not found.")
+        return StreamingResponse(
+            _event_stream(worker, job_id),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+
+def _job_response(job: Job) -> JobResponse:
+    """Build the answer of a job."""
+    output = job.output
+    download = f"/api/download/{job.id}/{Path(output).name}" if output else None
+    return JobResponse(
+        id=job.id,
+        status=job.status.value,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        error=job.error,
+        download=download,
+        summary=_complete_summary(job.summary, download, job.options),
+    )
+
+
+def _complete_summary(
+    summary: dict[str, Any] | None,
+    download: str | None,
+    options: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Add the title and the link of the download to the summary of a job.
+
+    Args:
+        summary: The numbers of the conversion.
+        download: The link of the EPUB.
+        options: The options of the job, where the title is.
+
+    Returns:
+        The summary, ready to be shown by the interface.
+    """
+    if summary is None:
+        return None
+    complete = dict(summary)
+    title = (options or {}).get("title")
+    if isinstance(title, str) and title:
+        complete["title"] = title
+    if download:
+        complete["download"] = download
+    return complete
+
+
+async def _event_stream(worker: Worker, job_id: str) -> AsyncIterator[str]:
+    """Yield the events of a job, as a Server-Sent Events stream.
+
+    The events that were published before the client connected are sent
+    first, so no progress is ever lost. The stream ends when the job is
+    finished.
+    """
+    sent = 0
+    heartbeat = 0
+    while True:
+        events = worker.events_for(job_id)
+        for event in events[sent:]:
+            data = event.as_dict()
+            if event.stage == "done":
+                output = data.get("output")
+                download = f"/api/download/{job_id}/{Path(str(output)).name}" if output else None
+                raw_summary = data.get("summary")
+                summary = (
+                    cast("dict[str, Any]", raw_summary) if isinstance(raw_summary, dict) else None
+                )
+                data["summary"] = _complete_summary(summary, download)
+            yield f"event: {event.stage}\ndata: {json.dumps(data)}\n\n"
+        sent = len(events)
+        if any(event.stage in {"done", "error"} for event in events):
+            return
+        heartbeat += 1
+        if heartbeat % 15 == 0:
+            yield ": heartbeat\n\n"
+        await asyncio.sleep(0.5)

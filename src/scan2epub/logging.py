@@ -83,6 +83,32 @@ def redact(value: object, key: str | None = None) -> object:
     return value
 
 
+class _CurrentStderr:
+    """A stream that always writes to the *current* ``sys.stderr``.
+
+    The standard streams are replaced by the test runners, and the ones they
+    replace are closed when the test ends. A logger that kept a reference to
+    the stream of the moment it was configured would fail with *"I/O
+    operation on closed file"* as soon as something was logged afterwards.
+    """
+
+    def write(self, data: str) -> int:
+        """Write the data to the current standard error."""
+        return sys.stderr.write(data)
+
+    def flush(self) -> None:
+        """Flush the current standard error."""
+        sys.stderr.flush()
+
+    def isatty(self) -> bool:
+        """Return whether the current standard error is a terminal."""
+        return bool(getattr(sys.stderr, "isatty", lambda: False)())
+
+
+#: The stream that the logger writes to.
+STDERR = _CurrentStderr()
+
+
 def _redact_processor(
     _logger: Any,  # noqa: ANN401 - the structlog processor signature is fixed
     _method_name: str,
@@ -107,10 +133,14 @@ def configure_logging(*, verbose: bool = False, json_logs: bool = False) -> None
 
     logging.basicConfig(
         format="%(message)s",
-        stream=sys.stderr,
+        stream=STDERR,
         level=level,
-        force=True,
     )
+    # ``basicConfig`` does nothing when the root logger already has handlers,
+    # which is the case when the command is imported by a test runner or by a
+    # server that configured logging itself. The requested level is applied
+    # in any case, so ``--verbose`` is never silently ignored.
+    logging.getLogger().setLevel(level)
     # structlog must not route through stdlib logging twice.
     structlog.configure(
         processors=[
@@ -127,7 +157,7 @@ def configure_logging(*, verbose: bool = False, json_logs: bool = False) -> None
             ),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
+        logger_factory=structlog.PrintLoggerFactory(file=cast("Any", STDERR)),
         cache_logger_on_first_use=True,
     )
 

@@ -21,6 +21,7 @@ from scan2epub.application.cache import (
 )
 from scan2epub.application.progress import ProgressEvent, ProgressReporter
 from scan2epub.application.stages.clean import CleanResult, clean_pages
+from scan2epub.application.stages.correct import CorrectionOutcome, apply_corrector, to_clean_result
 from scan2epub.application.stages.structure import structure_book
 from scan2epub.application.stages.validate import ValidationReport, validate_epub
 from scan2epub.config import Config
@@ -56,6 +57,10 @@ class PipelineResult:
     epub: EpubResult
     page_count: int
     duration_seconds: float
+    pages_recognised: int = 0
+    pages_from_cache: int = 0
+    corrections_accepted: int = 0
+    corrections_rejected: int = 0
 
 
 class Pipeline:
@@ -93,6 +98,12 @@ class Pipeline:
         self.work_dir = Path(work_dir)
         self.cache = cache
         self.reporter = reporter
+        #: The outcome of the correction pass, when there was one.
+        self.corrections: CorrectionOutcome | None = None
+        #: The number of pages that were recognised during the run.
+        self.pages_recognised = 0
+        #: The number of pages that came from the cache.
+        self.pages_from_cache = 0
 
     # -- helpers --------------------------------------------------------
 
@@ -239,6 +250,10 @@ class Pipeline:
             epub=epub_result,
             page_count=len(pages),
             duration_seconds=time.monotonic() - started,
+            pages_recognised=self.pages_recognised,
+            pages_from_cache=self.pages_from_cache,
+            corrections_accepted=self.corrections.accepted if self.corrections else 0,
+            corrections_rejected=self.corrections.rejected if self.corrections else 0,
         )
 
     def _recognize(self, page: PageImage) -> list[TextBlock]:
@@ -259,19 +274,14 @@ class Pipeline:
         return blocks
 
     def _correct(self, result: CleanResult) -> CleanResult:
-        """Run the LLM post-corrector over the cleaned pages."""
+        """Run the LLM post-corrector over the cleaned pages.
+
+        The guardrail of the stage decides whether each correction is
+        acceptable; the rejected ones keep the original text.
+        """
         corrector = self.corrector
         if corrector is None:
             return result
-        pages: list[PageContent] = []
-        for page in result.pages:
-            correction = corrector.correct(page.blocks)
-            pages.append(PageContent(index=page.index, blocks=tuple(correction.blocks)))
-        return CleanResult(
-            pages=tuple(pages),
-            removed_running_heads=result.removed_running_heads,
-            removed_page_numbers=result.removed_page_numbers,
-            joined_hyphens=result.joined_hyphens,
-            merged_paragraphs=result.merged_paragraphs,
-            detected_footnotes=result.detected_footnotes,
-        )
+        outcome = apply_corrector(list(result.pages), corrector, self.config.clean)
+        self.corrections = outcome
+        return to_clean_result(result, outcome)

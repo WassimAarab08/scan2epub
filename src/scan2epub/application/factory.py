@@ -13,7 +13,7 @@ from scan2epub.application.cache import FileCache
 from scan2epub.application.pipeline import Pipeline
 from scan2epub.application.progress import ProgressReporter
 from scan2epub.config import Config
-from scan2epub.domain.ports import OcrEngine
+from scan2epub.domain.ports import OcrEngine, TextCorrector
 from scan2epub.errors import ConfigurationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
 from scan2epub.infrastructure.ocr.tesseract import TesseractOcrEngine
@@ -30,7 +30,7 @@ __all__ = [
 _LOGGER = get_logger(__name__)
 
 #: The OCR engines that ship with the project.
-KNOWN_ENGINES = ("tesseract",)
+KNOWN_ENGINES = ("tesseract", "paddleocr-vl", "teleocr", "kraken")
 
 
 def available_engines() -> tuple[str, ...]:
@@ -56,20 +56,54 @@ def build_ocr_engine(
         ConfigurationError: If the engine is unknown or not installed.
     """
     engine_name = name or config.general.ocr_engine
-    if engine_name != "tesseract":
-        raise ConfigurationError(
-            f"Unknown OCR engine {engine_name!r}. Available engines: {', '.join(KNOWN_ENGINES)}."
-        )
-
     provider = config.ocr_provider(engine_name)
     options = provider.options
-    tessdata = options.get("tessdata_dir")
-    engine_language = language or str(options.get("lang", config.general.language))
-    return TesseractOcrEngine(
-        lang=engine_language,
-        oem=int(options.get("oem", 1)),
-        psm=int(options.get("psm", 3)),
-        tessdata_dir=Path(tessdata) if tessdata else None,
+
+    if engine_name == "tesseract":
+        tessdata = options.get("tessdata_dir")
+        engine_language = language or str(options.get("lang", config.general.language))
+        return TesseractOcrEngine(
+            lang=engine_language,
+            oem=int(options.get("oem", 1)),
+            psm=int(options.get("psm", 3)),
+            tessdata_dir=Path(tessdata) if tessdata else None,
+        )
+
+    if engine_name == "paddleocr-vl":
+        from scan2epub.infrastructure.ocr.paddleocr_vl import (  # noqa: PLC0415
+            PaddleOcrVlEngine,
+        )
+
+        return PaddleOcrVlEngine(
+            model=str(options.get("model", "PaddlePaddle/PaddleOCR-VL")),
+            device=str(options.get("device", "auto")),
+            max_new_tokens=int(options.get("max_new_tokens", 4096)),
+            revision=options.get("revision"),
+            trust_remote_code=bool(options.get("trust_remote_code", False)),
+        )
+
+    if engine_name == "teleocr":
+        from scan2epub.infrastructure.ocr.teleocr import TeleOcrEngine  # noqa: PLC0415
+
+        return TeleOcrEngine(
+            model=str(options.get("model", "XingChen-AGI/TeleOCR")),
+            device=str(options.get("device", "auto")),
+            revision=str(options.get("revision", "true")),
+            trust_remote_code=bool(options.get("trust_remote_code", False)),
+            max_new_tokens=int(options.get("max_new_tokens", 4096)),
+        )
+
+    if engine_name == "kraken":
+        from scan2epub.infrastructure.ocr.kraken import KrakenOcrEngine  # noqa: PLC0415
+
+        return KrakenOcrEngine(
+            model=str(options.get("model", "10.5281/zenodo.2577813")),
+            binary=str(options.get("binary", "kraken")),
+            timeout=int(options.get("timeout", 300)),
+        )
+
+    raise ConfigurationError(
+        f"Unknown OCR engine {engine_name!r}. Available engines: {', '.join(KNOWN_ENGINES)}."
     )
 
 
@@ -90,6 +124,45 @@ def with_language(config: Config, language: str) -> Config:
         ocr=providers,
         correctors=config.correctors,
         source_path=config.source_path,
+    )
+
+
+def build_corrector(config: Config, name: str | None = None) -> TextCorrector | None:
+    """Build the text corrector described by the configuration.
+
+    Args:
+        config: The effective configuration.
+        name: The name of the corrector. Defaults to
+            ``[general] text_corrector``.
+
+    Returns:
+        The corrector, or ``None`` when there is none: the conversion then
+        stays completely offline.
+
+    Raises:
+        ConfigurationError: If the corrector is unknown.
+    """
+    corrector_name = name or config.general.text_corrector
+    if not corrector_name:
+        return None
+    options = config.corrector_provider(corrector_name).options
+    if corrector_name == "litellm" or "/" in corrector_name:
+        from scan2epub.infrastructure.correction.litellm_corrector import (  # noqa: PLC0415
+            LiteLlmCorrector,
+        )
+
+        model = str(options.get("model", ""))
+        if not model:
+            model = corrector_name if "/" in corrector_name else "openai/gpt-4o-mini"
+        return LiteLlmCorrector(
+            model,
+            temperature=float(options.get("temperature", 0.0)),
+            max_tokens=int(options.get("max_tokens", 4096)),
+            timeout=float(options.get("timeout", 120.0)),
+            api_base=options.get("api_base"),
+        )
+    raise ConfigurationError(
+        f"Unknown text corrector {corrector_name!r}. Available correctors: litellm."
     )
 
 
