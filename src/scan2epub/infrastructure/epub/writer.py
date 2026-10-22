@@ -272,7 +272,7 @@ class EpubWriter:
             f'         unique-identifier="pub-id" xml:lang={quoteattr(language)}>',
             '  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">',
             f'    <dc:identifier id="pub-id">{_escape(package_id)}</dc:identifier>',
-            f"    <dc:title>{_escape(metadata.title)}</dc:title>",
+            f"    <dc:title>{_escape(metadata.title.strip() or 'Untitled book')}</dc:title>",
             f"    <dc:language>{_escape(language)}</dc:language>",
         ]
         if metadata.author:
@@ -457,15 +457,15 @@ class EpubWriter:
             raw = " ".join(block.text.split())
             if not raw:
                 continue
+            # A note whose marker the OCR lost is still a note: it is kept,
+            # without a reference in the text, instead of being dropped.
             match = _FOOTNOTE_MARKER_RE.match(raw)
-            if match is None:
-                continue
-            marker = match.group(1)
-            text = raw[match.end() :].strip() or raw
+            marker = match.group(1) if match is not None else ""
+            text = raw[match.end() :].strip() if match is not None else raw
             notes.append(
                 _Note(
                     marker=marker,
-                    text=text,
+                    text=text or raw,
                     full_text=raw,
                     anchor=f"{chapter.id}-fn-{len(notes) + 1}",
                     page=block.page,
@@ -482,7 +482,7 @@ class EpubWriter:
         """Insert noteref links for the footnotes whose marker is in ``text``."""
         insertions: list[tuple[int, int, str]] = []
         for note in candidates:
-            if note.anchor in used:
+            if note.anchor in used or not note.marker:
                 continue
             pattern = re.compile(rf"(?<![\w]){re.escape(note.marker)}(?![\w])")
             match = pattern.search(text)

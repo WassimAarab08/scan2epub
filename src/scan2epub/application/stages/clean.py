@@ -16,9 +16,11 @@ result is reproducible: running the pipeline twice gives the same book.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import groupby
 
-from scan2epub.application.stages.headings import classify_heading
+from scan2epub.application.stages.headings import classify_page, typical_line_height
 from scan2epub.config import CleanConfig
 from scan2epub.domain.models import BlockKind, PageContent, TextBlock
 from scan2epub.domain.normalize import folded, normalize_line
@@ -33,6 +35,18 @@ _PAGE_NUMBER_RE = re.compile(r"^[^0-9A-Za-z]*\d{1,5}[^0-9A-Za-z]*$")
 
 #: A footnote marker at the beginning of a block.
 _FOOTNOTE_RE = re.compile(r"^\s*[\(\[]?(\d{1,3})[\)\].:]?\s+\S")
+
+#: The notes of a page start below the middle of the page.
+FOOTNOTE_HALF_PAGE = 0.5
+
+#: The gap, in lines, that separates the notes from the last paragraph.
+FOOTNOTE_GAP = 1.6
+
+#: How much bigger than the body the type of a note may be.
+FOOTNOTE_TYPE_RATIO = 1.05
+
+#: The share of the page that the notes may take.
+FOOTNOTE_MAX_SHARE = 0.45
 
 #: A word continuation after a hyphen always starts with a lowercase letter.
 #: A word continuation after a hyphen always starts with a lowercase letter.
@@ -205,6 +219,18 @@ def _continues_previous(previous: str, following: str) -> bool:
     return True
 
 
+def _too_far_apart(previous: TextBlock, following: TextBlock) -> bool:
+    """Whether two blocks of the same page are separated by more than a line.
+
+    Tesseract returns one block per printed paragraph, so two blocks that
+    follow each other without a gap are two halves of the same paragraph; a
+    gap of a whole line means that a new paragraph began.
+    """
+    line_height = previous.bbox.height / max(1, len(previous.lines))
+    gap = following.bbox.y0 - previous.bbox.y1
+    return gap > line_height * 1.2
+
+
 def _merge_into_paragraphs(blocks: list[TextBlock]) -> tuple[list[TextBlock], int, int]:
     """Gather the lines that belong to the same paragraph.
 
@@ -257,7 +283,10 @@ def _merge_into_paragraphs(blocks: list[TextBlock]) -> tuple[list[TextBlock], in
             previous = merged[last_body]
             previous_text = " ".join(previous.text.split())
             current_text = " ".join(block.text.split())
-            if _continues_previous(previous_text, current_text):
+            # A gap of more than a line inside a page separates two
+            # paragraphs: the text that the OCR broke apart is contiguous.
+            contiguous = previous.page != block.page or not _too_far_apart(previous, block)
+            if contiguous and _continues_previous(previous_text, current_text):
                 if previous_text.rstrip().endswith("-"):
                     # The word itself was broken: drop the hyphen and glue
                     # the two halves together without a space.
@@ -283,6 +312,8 @@ def _detect_footnotes(blocks: list[TextBlock], config: CleanConfig) -> tuple[lis
 
     A note that the OCR split in two has a marker only in its first half, so
     the halves are recognised together: the second one continues the note.
+    The notes whose marker the OCR lost are found by their position: see
+    :func:`_mark_trailing_notes`.
     """
     detected = 0
     marked: list[TextBlock] = []
@@ -304,19 +335,98 @@ def _detect_footnotes(blocks: list[TextBlock], config: CleanConfig) -> tuple[lis
         else:
             last_footnote = None
         marked.append(candidate)
-    return marked, detected
+    marked, trailing = _mark_trailing_notes(marked)
+    return marked, detected + trailing
+
+
+def _mark_trailing_notes(blocks: list[TextBlock]) -> tuple[list[TextBlock], int]:
+    """Mark the notes at the foot of a page that carry no readable marker.
+
+    The OCR often loses the number of a note, and many books mark them with
+    an asterisk or a dagger instead of a number. The notes are still set
+    apart from the text: they start after the widest gap of the lower half of
+    the page and they are never set in a bigger type than the body.
+    """
+    result = list(blocks)
+    detected = 0
+    for _page, group in groupby(enumerate(result), key=lambda item: item[1].page):
+        indexed = list(group)
+        page_blocks = [block for _, block in indexed]
+        split = _footnote_split(page_blocks)
+        if split is None:
+            continue
+        for index, block in indexed[split:]:
+            text = " ".join(block.text.split())
+            if block.kind is BlockKind.BODY and not _PAGE_NUMBER_RE.match(text):
+                result[index] = block.with_kind(BlockKind.FOOTNOTE)
+                detected += 1
+    return result, detected
+
+
+def _footnote_split(blocks: Sequence[TextBlock]) -> int | None:
+    """Return the index of the first note at the foot of a page, if any.
+
+    The notes are the blocks that follow the last paragraph of the page. The
+    separation is a vertical gap bigger than the leading, in the lower half
+    of the page, and the whole group must be set in the type of the body or
+    in a smaller one.
+    """
+    if len(blocks) < 2:
+        return None
+    body = [block for block in blocks if block.kind is BlockKind.BODY]
+    if len(body) < 2:
+        return None
+    typical = typical_line_height(body)
+    if typical <= 0:
+        return None
+    for index in range(1, len(blocks)):
+        current = blocks[index]
+        previous = blocks[index - 1]
+        if current.kind is not BlockKind.BODY:
+            continue
+        if current.bbox.y0 < FOOTNOTE_HALF_PAGE:
+            continue
+        gap = current.bbox.y0 - previous.bbox.y1
+        if gap < typical * FOOTNOTE_GAP:
+            continue
+        if not _is_note_group(blocks[index:], typical):
+            continue
+        return index
+    return None
+
+
+def _is_note_group(blocks: Sequence[TextBlock], typical: float) -> bool:
+    """Whether the trailing blocks of a page are all set like notes."""
+    if not blocks:
+        return False
+    height = 0.0
+    for block in blocks:
+        if block.kind not in {BlockKind.BODY, BlockKind.FOOTNOTE}:
+            return False
+        lines = max(1, len(block.lines))
+        if block.bbox.height / lines > typical * FOOTNOTE_TYPE_RATIO:
+            return False
+        height += block.bbox.height
+    # A group of notes is never most of the page: a paragraph that follows a
+    # wide gap because of a figure is still body text.
+    return height <= FOOTNOTE_MAX_SHARE
 
 
 def _mark_headings(blocks: list[TextBlock]) -> list[TextBlock]:
-    """Mark the blocks that look like headings."""
+    """Mark the blocks that look like headings.
+
+    The blocks of every page are classified together, because the size of
+    the type is only meaningful next to the rest of the page.
+    """
     marked: list[TextBlock] = []
-    for block in blocks:
-        candidate = block
-        if candidate.kind is BlockKind.BODY:
-            level = classify_heading(candidate)
-            if level is not None:
+    for _page, page_blocks in groupby(blocks, key=lambda block: block.page):
+        group = list(page_blocks)
+        levels = classify_page(group)
+        for block, level in zip(group, levels, strict=True):
+            candidate = block
+            if candidate.kind is BlockKind.BODY and level is not None:
                 candidate = candidate.with_kind(BlockKind.HEADING).with_level(level)
-        marked.append(candidate)
+            marked.append(candidate)
     return marked
 
 

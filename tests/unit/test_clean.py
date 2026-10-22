@@ -167,6 +167,33 @@ def test_footnotes_are_detected(pages: list[PageContent]) -> None:
     assert BlockKind.FOOTNOTE in kinds
 
 
+def test_a_note_without_a_marker_is_found_by_its_place() -> None:
+    """A note whose number the OCR lost is still a note.
+
+    The notes of a printed page start after a gap, in the lower half, and
+    they are set in the type of the body or in a smaller one.
+    """
+    body = "\n".join(["Una línea del cuerpo del artículo."] * 10)
+    more = "\n".join(["Otra línea que sigue el texto."] * 6)
+    note = "\n".join(["Proc., BG, 1, 12, 43; Jord., Get. 302.", "Vid. Cass., Var., V, 43."])
+    pages = [
+        PageContent(
+            index=0,
+            blocks=(
+                _block(body, 0.10, 0.30, order=0, page=0),
+                _block(more + ".", 0.32, 0.44, order=1, page=0),
+                _block(note, 0.60, 0.64, order=2, page=0),
+            ),
+        )
+    ]
+
+    result = clean_pages(pages)
+
+    kinds = [block.kind for block in result.pages[0].blocks]
+    assert kinds == [BlockKind.BODY, BlockKind.BODY, BlockKind.FOOTNOTE]
+    assert result.detected_footnotes == 1
+
+
 def test_long_s_is_normalised(pages: list[PageContent]) -> None:
     """The long s becomes a plain s during the cleaning."""
     pages = [
