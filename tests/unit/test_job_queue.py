@@ -20,6 +20,26 @@ def store(tmp_path: Path) -> JobStore:
         yield queue
 
 
+def test_every_thread_gets_a_connection_of_its_own(store: JobStore) -> None:
+    """The worker and the requests never share a connection.
+
+    A connection of SQLite is not safe to use from two threads at once, and
+    sharing one made the requests of the API fail at random with
+    ``sqlite3.InterfaceError: bad parameter or other API misuse``.
+    """
+    connection = store._connection()
+    seen: list[object] = []
+
+    def other() -> None:
+        seen.append(store._connection())
+
+    thread = threading.Thread(target=other)
+    thread.start()
+    thread.join()
+
+    assert seen and seen[0] is not connection
+
+
 def test_a_job_is_created(store: JobStore) -> None:
     """A job is queued."""
     job = store.create("libro.pdf", {"title": "Libro"})

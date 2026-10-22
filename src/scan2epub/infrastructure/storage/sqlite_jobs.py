@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -97,31 +98,41 @@ class JobStore:
         """
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        # The connection is shared by the request handlers and by the worker
-        # thread, so the check of the thread is disabled. SQLite serialises
-        # the writes itself, and the transactions are short.
-        self._connection = sqlite3.connect(
-            str(self.path), isolation_level=None, check_same_thread=False
-        )
-        self._connection.row_factory = sqlite3.Row
-        # The write-ahead log lets the API read while the worker writes.
-        self._connection.execute("PRAGMA journal_mode=WAL")
-        self._connection.execute("PRAGMA busy_timeout=5000")
-        self._connection.executescript(SCHEMA)
-        self._migrate()
+        # A connection of SQLite cannot be used by two threads at the same
+        # time, and the requests of the API and the worker thread do query
+        # the same file, so every thread gets a connection of its own. The
+        # file is the shared part, and WAL lets the readers and the writer
+        # work at once.
+        self._local = threading.local()
+        connection = self._connection()
+        connection.executescript(SCHEMA)
+        self._migrate(connection)
 
-    def _migrate(self) -> None:
+    def _connection(self) -> sqlite3.Connection:
+        """Return the connection of this thread, opening it when it is new."""
+        connection = cast("sqlite3.Connection | None", getattr(self._local, "connection", None))
+        if connection is None:
+            connection = sqlite3.connect(str(self.path), isolation_level=None, timeout=5.0)
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute("PRAGMA busy_timeout=5000")
+            self._local.connection = connection
+        return connection
+
+    def _migrate(self, connection: sqlite3.Connection) -> None:
         """Add the columns that a database of an older version does not have."""
         columns = {
-            str(row["name"])
-            for row in self._connection.execute("PRAGMA table_info(jobs)").fetchall()
+            str(row["name"]) for row in connection.execute("PRAGMA table_info(jobs)").fetchall()
         }
         if "summary" not in columns:
-            self._connection.execute("ALTER TABLE jobs ADD COLUMN summary TEXT")
+            connection.execute("ALTER TABLE jobs ADD COLUMN summary TEXT")
 
     def close(self) -> None:
-        """Close the connection."""
-        self._connection.close()
+        """Close the connection of this thread."""
+        connection = cast("sqlite3.Connection | None", getattr(self._local, "connection", None))
+        if connection is not None:
+            connection.close()
+            self._local.connection = None
 
     def __enter__(self) -> JobStore:
         """Return the store, for the ``with`` statement."""
@@ -143,7 +154,7 @@ class JobStore:
         """
         identifier = uuid.uuid4().hex
         now = _now()
-        self._connection.execute(
+        self._connection().execute(
             "INSERT INTO jobs (id, status, source, options, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (
@@ -166,14 +177,18 @@ class JobStore:
 
     def get(self, identifier: str) -> Job | None:
         """Return a job, or ``None`` when it does not exist."""
-        row = self._connection.execute("SELECT * FROM jobs WHERE id = ?", (identifier,)).fetchone()
+        row = (
+            self._connection().execute("SELECT * FROM jobs WHERE id = ?", (identifier,)).fetchone()
+        )
         return _row_to_job(row) if row is not None else None
 
     def list(self, limit: int = 100) -> list[Job]:
         """Return the jobs, the newest first."""
-        rows = self._connection.execute(
-            "SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?", (limit,)
-        ).fetchall()
+        rows = (
+            self._connection()
+            .execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?", (limit,))
+            .fetchall()
+        )
         return [_row_to_job(row) for row in rows]
 
     def update(
@@ -206,7 +221,7 @@ class JobStore:
         assignments.append("updated_at = ?")
         values.append(_now())
         values.append(identifier)
-        self._connection.execute(
+        self._connection().execute(
             f"UPDATE jobs SET {', '.join(assignments)} WHERE id = ?",  # noqa: S608 - fixed fragments
             values,
         )
@@ -217,15 +232,19 @@ class JobStore:
         Returns:
             The job, or ``None`` when the queue is empty.
         """
-        row = self._connection.execute(
-            "SELECT id FROM jobs WHERE status = ? ORDER BY created_at LIMIT 1",
-            (JobStatus.QUEUED.value,),
-        ).fetchone()
+        row = (
+            self._connection()
+            .execute(
+                "SELECT id FROM jobs WHERE status = ? ORDER BY created_at LIMIT 1",
+                (JobStatus.QUEUED.value,),
+            )
+            .fetchone()
+        )
         if row is None:
             return None
         identifier = str(row["id"])
         now = _now()
-        cursor = self._connection.execute(
+        cursor = self._connection().execute(
             "UPDATE jobs SET status = ?, started_at = ?, updated_at = ? "
             "WHERE id = ? AND status = ?",
             (
@@ -255,7 +274,7 @@ class JobStore:
             summary: The numbers of the conversion, for the interface.
         """
         now = _now()
-        self._connection.execute(
+        self._connection().execute(
             "UPDATE jobs SET status = ?, output = ?, summary = ?, finished_at = ?, "
             "updated_at = ? WHERE id = ?",
             (
@@ -271,7 +290,7 @@ class JobStore:
     def fail(self, identifier: str, error: str) -> None:
         """Mark a job as failed."""
         now = _now()
-        self._connection.execute(
+        self._connection().execute(
             "UPDATE jobs SET status = ?, error = ?, finished_at = ?, updated_at = ? WHERE id = ?",
             (JobStatus.FAILED.value, error, now, now, identifier),
         )
@@ -283,7 +302,7 @@ class JobStore:
             Whether the job was cancelled.
         """
         now = _now()
-        cursor = self._connection.execute(
+        cursor = self._connection().execute(
             "UPDATE jobs SET status = ?, finished_at = ?, updated_at = ? "
             "WHERE id = ? AND status IN (?, ?)",
             (
@@ -304,7 +323,7 @@ class JobStore:
             Whether the job was requeued.
         """
         now = _now()
-        cursor = self._connection.execute(
+        cursor = self._connection().execute(
             "UPDATE jobs SET status = ?, error = NULL, started_at = NULL, "
             "finished_at = NULL, updated_at = ? WHERE id = ?",
             (JobStatus.QUEUED.value, now, identifier),
@@ -314,11 +333,13 @@ class JobStore:
     def count(self, status: JobStatus | None = None) -> int:
         """Return the number of jobs, optionally of one status."""
         if status is None:
-            row = self._connection.execute("SELECT COUNT(*) AS total FROM jobs").fetchone()
+            row = self._connection().execute("SELECT COUNT(*) AS total FROM jobs").fetchone()
         else:
-            row = self._connection.execute(
-                "SELECT COUNT(*) AS total FROM jobs WHERE status = ?", (status.value,)
-            ).fetchone()
+            row = (
+                self._connection()
+                .execute("SELECT COUNT(*) AS total FROM jobs WHERE status = ?", (status.value,))
+                .fetchone()
+            )
         return int(row["total"]) if row is not None else 0
 
 
