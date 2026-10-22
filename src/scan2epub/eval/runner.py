@@ -20,11 +20,8 @@ from scan2epub.config import Config
 from scan2epub.domain.models import PageContent, PageImage, TextBlock
 from scan2epub.domain.ports import OcrEngine
 from scan2epub.eval.metrics import character_error_rate, word_error_rate
-from scan2epub.logging import get_logger
 
 __all__ = ["SampleResult", "evaluate_sample", "render_markdown", "sample_directories"]
-
-_LOGGER = get_logger(__name__)
 
 #: The name of the file with the reference transcription.
 REFERENCE_FILE = "reference.txt"

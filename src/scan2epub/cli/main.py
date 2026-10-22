@@ -5,6 +5,7 @@ from __future__ import annotations
 import functools
 import sys
 from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import typer
 
@@ -14,8 +15,14 @@ from scan2epub.logging import configure_logging
 
 __all__ = ["app", "handle_errors", "main"]
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def handle_errors[**P, R](function: Callable[P, R]) -> Callable[P, R]:
+
+# The type parameters are written with TypeVar on purpose: the Python frontend
+# of CodeQL does not understand the PEP 695 syntax yet, and it reports the
+# parameters as variables that are never initialised.
+def handle_errors(function: Callable[_P, _R]) -> Callable[_P, _R]:  # noqa: UP047
     """Turn the errors of the library into a clear message.
 
     Without it, a failure ends with a Python traceback. With it, the user
@@ -23,7 +30,7 @@ def handle_errors[**P, R](function: Callable[P, R]) -> Callable[P, R]:
     """
 
     @functools.wraps(function)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         try:
             return function(*args, **kwargs)
         except Scan2EpubError as exc:

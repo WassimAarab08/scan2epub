@@ -24,11 +24,8 @@ from scan2epub.eval.runner import (
     render_markdown,
     sample_directories,
 )
-from scan2epub.logging import get_logger
 
 __all__ = ["eval"]
-
-_LOGGER = get_logger(__name__)
 
 
 def eval(

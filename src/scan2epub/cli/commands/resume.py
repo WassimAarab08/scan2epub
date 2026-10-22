@@ -23,11 +23,8 @@ from scan2epub.domain.models import BookMetadata
 from scan2epub.errors import ConfigurationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
 from scan2epub.infrastructure.pdf.pdfium_source import PdfiumPageSource
-from scan2epub.logging import get_logger
 
 __all__ = ["resume"]
-
-_LOGGER = get_logger(__name__)
 
 
 def resume(

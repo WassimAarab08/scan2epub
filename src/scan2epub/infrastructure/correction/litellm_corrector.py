@@ -19,11 +19,8 @@ from typing import cast
 
 from scan2epub.domain.models import CorrectionResult, DiffEntry, TextBlock
 from scan2epub.errors import EngineNotAvailableError
-from scan2epub.logging import get_logger
 
 __all__ = ["CORRECTION_PROMPT", "LiteLlmCorrector"]
-
-_LOGGER = get_logger(__name__)
 
 #: The prompt of the corrector. It is deliberately narrow: the model may only
 #: repair the recognition errors.
@@ -136,7 +133,7 @@ class LiteLlmCorrector:
             {"role": "user", "content": text},
         ]
         try:
-            completion = cast("Callable[..., object]", litellm.completion)
+            completion = cast(Callable[..., object], litellm.completion)
             response = completion(
                 model=self.model,
                 messages=payload,
