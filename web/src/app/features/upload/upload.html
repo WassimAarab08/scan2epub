@@ -1,0 +1,233 @@
+<section class="mx-auto w-full max-w-[120rem] px-6 py-10 lg:px-10">
+  <header class="mb-10 max-w-3xl">
+    <p class="text-xs font-semibold uppercase tracking-[0.25em] text-accent">Step one</p>
+    <h1 class="mt-3 font-serif text-4xl leading-tight text-ink sm:text-5xl">
+      Turn a scanned book into a clean EPUB.
+    </h1>
+    <p class="mt-4 max-w-2xl text-base leading-relaxed text-muted">
+      The pages are recognised on this machine, the running heads and the broken words are repaired,
+      and the result is a validated EPUB 3 that any reader can open.
+    </p>
+  </header>
+
+  <form
+    class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_26rem]"
+    (submit)="$event.preventDefault(); convert()"
+  >
+    <div class="min-w-0">
+      <!-- The drop zone. -->
+      <div
+        class="rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-colors"
+        [class.border-accent]="dragging()"
+        [class.bg-accent-soft]="dragging()"
+        [class.border-line]="!dragging()"
+        [class.bg-card]="!dragging()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      >
+        <svg
+          class="mx-auto h-10 w-10 text-accent"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 16V4" />
+          <path d="m7 9 5-5 5 5" />
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+        </svg>
+
+        <p class="mt-5 font-serif text-xl text-ink">
+          {{ store.file() ? 'The scan is ready.' : 'Drop the scanned PDF here.' }}
+        </p>
+
+        @if (store.file(); as file) {
+          <div
+            class="mx-auto mt-4 flex max-w-md items-center justify-between gap-4 rounded-xl border border-line bg-paper px-4 py-3 text-left"
+          >
+            <div class="min-w-0">
+              <p class="truncate font-medium text-ink">{{ file.name }}</p>
+              <p class="mt-0.5 text-sm text-muted">{{ fileSize() }}</p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-accent"
+              (click)="clearFile()"
+            >
+              Remove
+            </button>
+          </div>
+        } @else {
+          <p class="mt-2 text-sm text-muted">or choose it from the disk</p>
+          <label
+            class="mt-6 inline-flex cursor-pointer items-center rounded-lg bg-ink px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-accent-deep"
+          >
+            Choose a PDF
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              class="sr-only"
+              (change)="onFileChosen($event)"
+            />
+          </label>
+          <p class="mt-4 text-xs text-muted">PDF only, up to 512 MiB.</p>
+        }
+      </div>
+
+      @if (rejection(); as message) {
+        <p
+          class="mt-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger"
+          role="alert"
+        >
+          <svg
+            class="mt-0.5 h-4 w-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v6" />
+            <path d="M12 16.5h.01" />
+          </svg>
+          {{ message }}
+        </p>
+      }
+
+      <!-- The metadata. -->
+      <div class="mt-10 grid gap-6 sm:grid-cols-2">
+        <label class="block">
+          <span class="text-sm font-medium text-ink">Title</span>
+          <input
+            type="text"
+            name="title"
+            [placeholder]="store.suggestedTitle() || 'The name of the book'"
+            class="mt-2 w-full rounded-lg border border-line bg-card px-3.5 py-2.5 text-ink placeholder:text-muted/60"
+            [ngModel]="store.title()"
+            (ngModelChange)="store.setTitle($event)"
+          />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-ink">Author</span>
+          <input
+            type="text"
+            name="author"
+            placeholder="Who wrote it"
+            class="mt-2 w-full rounded-lg border border-line bg-card px-3.5 py-2.5 text-ink placeholder:text-muted/60"
+            [ngModel]="store.author()"
+            (ngModelChange)="store.setAuthor($event)"
+          />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-ink">Year</span>
+          <input
+            type="text"
+            name="year"
+            placeholder="1899"
+            class="mt-2 w-full rounded-lg border border-line bg-card px-3.5 py-2.5 text-ink placeholder:text-muted/60"
+            [ngModel]="store.year()"
+            (ngModelChange)="store.setYear($event)"
+          />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-ink">Language of the scan</span>
+          <select
+            name="language"
+            class="mt-2 w-full rounded-lg border border-line bg-card px-3.5 py-2.5 text-ink"
+            [ngModel]="store.language()"
+            (ngModelChange)="store.setLanguage($event)"
+          >
+            @for (language of languages; track language.code) {
+              <option [value]="language.code">{{ language.label }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <aside class="min-w-0 lg:sticky lg:top-24">
+      <fieldset>
+        <legend class="text-sm font-medium text-ink">Recognition engine</legend>
+        <div class="mt-2 grid gap-3">
+          @for (engine of store.engines(); track engine.name) {
+            <label
+              class="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition"
+              [class.border-accent]="store.engineName() === engine.name"
+              [class.bg-accent-soft]="store.engineName() === engine.name"
+              [class.border-line]="store.engineName() !== engine.name"
+              [class.bg-card]="store.engineName() !== engine.name"
+            >
+              <input
+                type="radio"
+                name="engine"
+                class="mt-1 accent-[var(--color-accent)]"
+                [value]="engine.name"
+                [checked]="store.engineName() === engine.name"
+                (change)="store.setEngine(engine.name)"
+                [disabled]="!engine.available"
+              />
+              <span class="min-w-0">
+                <span class="block font-medium text-ink">{{ engine.name }}</span>
+                <span class="mt-0.5 block truncate text-sm text-muted">{{ engine.details }}</span>
+              </span>
+            </label>
+          } @empty {
+            @if (store.enginesLoaded()) {
+              <p class="text-sm text-muted">
+                The service is unreachable, so the engines cannot be listed. Start it with
+                <code class="rounded bg-paper-deep px-1 py-0.5 font-mono text-xs"
+                  >scan2epub serve</code
+                >.
+              </p>
+            } @else {
+              <p class="text-sm text-muted">Asking the service for the engines…</p>
+            }
+          }
+        </div>
+      </fieldset>
+
+      <div
+        class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-card px-4 py-3"
+      >
+        <div class="text-sm text-muted">
+          <span class="font-medium text-ink">Estimated cost:</span>
+          {{ store.cost().label }}
+        </div>
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:opacity-50"
+          [disabled]="!ready()"
+        >
+          Convert to EPUB
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+            <path d="m13 6 6 6-6 6" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="mt-4 text-xs leading-relaxed text-muted">
+        The file is uploaded once and the conversion runs in the background, so the browser never
+        waits for the whole book. You can keep reading the progress on the next screen.
+      </p>
+    </aside>
+  </form>
+</section>

@@ -1,0 +1,70 @@
+<div
+  class="flex flex-col"
+  [class.h-dvh]="readerRoute()"
+  [class.overflow-hidden]="readerRoute()"
+  [class.min-h-dvh]="!readerRoute()"
+>
+  <header
+    class="sticky top-0 z-20 shrink-0 border-b border-line bg-paper/90 backdrop-blur"
+    [class.hidden]="readerRoute() && reader.preferences().focus"
+  >
+    <div
+      class="flex w-full items-center justify-between gap-6 px-6 lg:px-10"
+      [class.py-2]="readerRoute()"
+      [class.py-4]="!readerRoute()"
+    >
+      <a routerLink="/" class="flex items-baseline gap-3">
+        <span class="font-serif text-xl tracking-tight text-ink">scan2epub</span>
+        <span
+          class="hidden text-[0.65rem] font-medium uppercase tracking-[0.25em] text-muted sm:inline"
+        >
+          Scanned books to EPUB 3
+        </span>
+      </a>
+
+      <div class="flex items-center gap-1 sm:gap-4">
+        @if (store.health(); as health) {
+          <span
+            class="hidden items-center gap-1.5 text-xs text-muted md:inline-flex"
+            title="{{ health.engines.join(', ') }}"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+            API {{ health.version }}
+          </span>
+        }
+        <nav class="flex items-center gap-1 text-sm">
+          <a
+            routerLink="/"
+            routerLinkActive="text-accent"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="rounded-lg px-3 py-1.5 text-muted transition hover:text-accent"
+          >
+            Convert
+          </a>
+          <a
+            routerLink="/reader"
+            routerLinkActive="text-accent"
+            class="rounded-lg px-3 py-1.5 text-muted transition hover:text-accent"
+          >
+            Reader
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1" [class.overflow-hidden]="readerRoute()">
+    <router-outlet />
+  </main>
+
+  @if (!readerRoute()) {
+    <footer class="shrink-0 border-t border-line">
+      <div
+        class="flex w-full flex-wrap items-center justify-between gap-3 px-6 py-5 text-xs text-muted lg:px-10"
+      >
+        <p>Everything runs on this machine: no key and no network access are needed.</p>
+        <p>Apache-2.0 · The reader is foliate-js (MIT).</p>
+      </div>
+    </footer>
+  }
+</div>
