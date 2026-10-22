@@ -7,10 +7,10 @@ honest: they measure the work that is done, not the work that is planned.
 | --- | --- | --- |
 | 0 — Repository | **100 %** | Repository, Apache-2.0 licence, documentation, CI skeleton, issue and pull request templates. |
 | 1 — MVP | **100 %** | `scan2epub convert`: Tesseract → deterministic cleaning → a valid EPUB 3. |
-| 2 — Local models | **25 %** | The cache and the resume are done; the vision-language engines, the layout analyser and the evaluation are not. |
-| 3 — Remote models | **0 %** | LiteLLM: remote OCR, LLM correction with guardrails, cost control. |
-| 4 — Service | **25 %** | The REST API and the web page exist; the queue, the worker and the progress by SSE do not. |
-| 5 — Web interface | **0 %** | The Angular application, the page-by-page review and the integrated reader. |
+| 2 — Local models | **90 %** | The layout analyser, the three vision-language engines, the resume and the evaluation are done; the benchmark table has no numbers yet. |
+| 3 — Remote models | **75 %** | The LiteLLM corrector behind the guardrail, the modernisation, the cost estimate and the hard budget are done; a remote OCR adapter and the retries are not. |
+| 4 — Service | **100 %** | The API, the SQLite queue, the worker, the progress by SSE and the endpoints to list, cancel and resume a job. |
+| 5 — Web interface | **80 %** | The Angular application, the upload, the live stages and the integrated reader are done; the review view is not. |
 | 6 — Release | **50 %** | The container images and the CI are done; the v0.1.0 release is not. |
 
 ## Phase 0 — Repository ✅
@@ -38,46 +38,47 @@ honest: they measure the work that is done, not the work that is planned.
 - [x] The cache: the artefacts are keyed by the hash of their inputs, per page.
 - [x] 241 tests, 90 % of coverage, and a browser test that opens the book in foliate-js.
 
-## Phase 2 — Local models ◔ 25 %
+## Phase 2 — Local models ◕ 90 %
 
 - [x] The cache of the recognition results, keyed by the content and by the settings of the engine.
 - [x] The pre-processed images are cached too, so a second run does not redo the work.
-- [ ] The layout analyser: the columns, the figures and the footnote zones of a page.
-- [ ] The **PaddleOCR-VL** adapter (`transformers` supports it natively, without `trust_remote_code`).
-- [ ] The **TeleOCR** adapter, behind an explicit `--trust-remote-code` and a pinned revision.
-- [ ] The **Kraken** adapter, for the historical handwriting.
-- [ ] `scan2epub resume`: continue an interrupted job.
-- [ ] The corpus of `samples/`: pages of public-domain books with their reference transcription.
-- [ ] `scan2epub eval`: the CER and the WER of every engine, with and without the correction.
-- [ ] The table of benchmarks in `docs/benchmarks.md`.
+- [x] The layout analyser: the columns, the figures and the footnote zones of a page.
+- [x] The **PaddleOCR-VL** adapter (`transformers` supports it natively, without `trust_remote_code`).
+- [x] The **TeleOCR** adapter, behind an explicit `--trust-remote-code` and a pinned revision.
+- [x] The **Kraken** adapter, for the historical handwriting.
+- [x] `scan2epub resume`: continue an interrupted job.
+- [x] The corpus of `samples/`: pages of public-domain books with their reference transcription.
+- [x] `scan2epub eval`: the CER and the WER of every engine, with and without the correction.
+- [ ] The table of benchmarks in `docs/benchmarks.md`, with the numbers of every engine.
 
-## Phase 3 — Remote models ○ 0 %
+## Phase 3 — Remote models ◕ 75 %
 
 - [ ] The **LiteLLM** vision adapter: any provider that speaks the OpenAI format.
-- [ ] The **LiteLLM** corrector, with the edit-distance guardrail and the stored diffs.
-- [ ] `--modernize`, off by default, to modernise the spelling.
-- [ ] The cost estimator and the hard budget limit.
+- [x] The **LiteLLM** corrector, with the edit-distance guardrail and the stored diffs.
+- [x] `--modernize`, off by default, to modernise the spelling.
+- [x] The cost estimator and the hard budget limit.
 - [ ] The retries with backoff and the rate limiting.
-- [ ] `scan2epub estimate`: the price of a run, before it happens.
+- [x] `scan2epub estimate`: the price of a run, before it happens.
 
-## Phase 4 — Service ◔ 25 %
+## Phase 4 — Service ✅
 
 - [x] The REST API: `/health`, `/api/engines`, `/api/convert`, `/api/download`.
 - [x] The web page that converts a book.
 - [x] The OpenAPI documentation at `/docs`.
-- [ ] The queue of jobs in SQLite, with an atomic claim.
-- [ ] The worker process.
-- [ ] The progress by SSE.
-- [ ] The endpoints to list, cancel and resume the jobs.
+- [x] The queue of jobs in SQLite, with an atomic claim.
+- [x] The worker process.
+- [x] The progress by SSE, with the events replayed to a client that arrives late.
+- [x] The endpoints to list, cancel and resume the jobs.
 
-## Phase 5 — Web interface ○ 0 %
+## Phase 5 — Web interface ◕ 80 %
 
-- [ ] The Angular application, with standalone components and signals.
-- [ ] The drag and drop upload.
-- [ ] The selection of the engine and of the corrector, with the estimated cost.
-- [ ] The progress by stage.
+- [x] The Angular application, with standalone components and signals.
+- [x] The drag and drop upload.
+- [x] The selection of the engine and of the corrector, with the estimated cost.
+- [x] The progress by stage.
 - [ ] The review view: the scan and the text side by side, editable.
-- [ ] The integrated reader: the font, the size, the leading, the margins, the themes and the saved progress.
+- [x] The integrated reader: the font, the size, the leading, the margins, the themes and the saved progress.
+- [x] The reading mode: the book takes the whole screen and every menu goes away.
 
 ## Phase 6 — Release ◔ 50 %
 
