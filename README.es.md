@@ -228,6 +228,7 @@ un motor de OCR en menos de cincuenta líneas.
 | Documento | Contenido |
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Capas, contratos de etapa, modelo de datos, seguridad del corrector |
+| [`docs/web.md`](docs/web.md) | La API de trabajos, el flujo de eventos y el lector |
 | [`docs/roadmap.md`](docs/roadmap.md) | Qué está hecho, qué no, y dónde puedes ayudar |
 | [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Escribe tu propio `OcrEngine` / `TextCorrector` en menos de 50 líneas |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, variables de entorno, proveedores |

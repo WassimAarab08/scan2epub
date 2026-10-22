@@ -226,6 +226,7 @@ OCR engine in fewer than fifty lines.
 | Document | Contents |
 | --- | --- |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, stage contracts, data model, the safety of the corrector |
+| [`docs/web.md`](docs/web.md) | The job API, the stream of events and the reader |
 | [`docs/roadmap.md`](docs/roadmap.md) | What is done, what is not, and where you can help |
 | [`docs/adding-an-engine.md`](docs/adding-an-engine.md) | Write your own `OcrEngine` / `TextCorrector` in under 50 lines |
 | [`docs/configuration.md`](docs/configuration.md) | `config.toml`, environment variables, providers |
