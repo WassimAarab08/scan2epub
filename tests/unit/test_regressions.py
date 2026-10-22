@@ -10,12 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from scan2epub.application.factory import build_ocr_engine, with_language
+from scan2epub.application.factory import build_ocr_engine, with_engine, with_language
 from scan2epub.application.pipeline import Pipeline
 from scan2epub.application.stages.clean import _continues_previous
 from scan2epub.application.stages.headings import classify_heading
 from scan2epub.config import Config, GeneralConfig, OcrProviderConfig
 from scan2epub.domain.models import BBox, PageImage, TextBlock
+from scan2epub.errors import ConfigurationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
 from scan2epub.infrastructure.ocr.tesseract import TesseractOcrEngine
 
@@ -129,6 +130,22 @@ def test_the_language_override_also_changes_the_provider() -> None:
     )
     overridden = with_language(config, "eng")
     assert overridden.ocr_provider("tesseract").options["lang"] == "eng"
+
+
+def test_the_engine_override_changes_the_engine() -> None:
+    """The engine chosen in the interface is the engine that runs."""
+    config = Config(general=GeneralConfig(ocr_engine="tesseract"))
+    overridden = with_engine(config, "kraken")
+    assert overridden.general.ocr_engine == "kraken"
+    # The original configuration is never touched.
+    assert config.general.ocr_engine == "tesseract"
+
+
+def test_an_unknown_engine_is_refused() -> None:
+    """A name that ships with nothing is a mistake, not a silent fallback."""
+    config = Config(general=GeneralConfig())
+    with pytest.raises(ConfigurationError):
+        with_engine(config, "no-such-engine")
 
 
 def test_the_options_of_a_provider_are_read(tmp_path: Path, require_tesseract: None) -> None:

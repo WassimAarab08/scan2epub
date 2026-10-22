@@ -8,11 +8,12 @@ everywhere.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from scan2epub.application.cache import FileCache
 from scan2epub.application.pipeline import Pipeline
 from scan2epub.application.progress import ProgressReporter
-from scan2epub.config import Config
+from scan2epub.config import Config, OcrProviderConfig
 from scan2epub.domain.ports import OcrEngine, TextCorrector
 from scan2epub.errors import ConfigurationError
 from scan2epub.infrastructure.imaging.opencv_preprocessor import OpenCvPreprocessor
@@ -24,6 +25,7 @@ __all__ = [
     "available_engines",
     "build_ocr_engine",
     "build_pipeline",
+    "with_engine",
     "with_language",
 ]
 
@@ -117,11 +119,38 @@ def with_language(config: Config, language: str) -> Config:
         name: provider.model_copy(update={"options": {**provider.options, "lang": language}})
         for name, provider in config.ocr.items()
     }
+    return _with_general(
+        config,
+        {"language": language},
+        providers=providers,
+    )
+
+
+def with_engine(config: Config, engine: str) -> Config:
+    """Return a copy of the configuration that uses another OCR engine.
+
+    Raises:
+        ConfigurationError: If the engine is unknown.
+    """
+    if engine not in KNOWN_ENGINES:
+        raise ConfigurationError(
+            f"Unknown OCR engine {engine!r}. Available engines: {', '.join(KNOWN_ENGINES)}."
+        )
+    return _with_general(config, {"ocr_engine": engine})
+
+
+def _with_general(
+    config: Config,
+    update: dict[str, Any],
+    *,
+    providers: dict[str, OcrProviderConfig] | None = None,
+) -> Config:
+    """Return a copy of the configuration with some general option replaced."""
     return Config(
-        general=config.general.model_copy(update={"language": language}),
+        general=config.general.model_copy(update=update),
         preprocess=config.preprocess,
         clean=config.clean,
-        ocr=providers,
+        ocr=providers if providers is not None else config.ocr,
         correctors=config.correctors,
         source_path=config.source_path,
     )

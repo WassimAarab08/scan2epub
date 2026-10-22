@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from scan2epub.application.factory import build_pipeline, with_language
+from scan2epub.application.factory import build_pipeline, with_engine, with_language
 from scan2epub.application.pipeline import PipelineResult
 from scan2epub.application.progress import ProgressEvent, ProgressReporter
 from scan2epub.config import Config
@@ -200,6 +200,10 @@ class Worker:
         config = self.config
         if isinstance(language, str) and language:
             config = with_language(self.config, language)
+
+        engine = options.get("engine")
+        if isinstance(engine, str) and engine:
+            config = with_engine(config, engine)
 
         pipeline = build_pipeline(config, source, work)
         pipeline.reporter = self._reporter(job.id)

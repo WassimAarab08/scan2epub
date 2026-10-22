@@ -216,6 +216,7 @@ export class ConversionStore {
         author: this.author().trim(),
         year: this.year().trim(),
         language: this.language(),
+        engine: this.engineName(),
       });
       this.jobId.set(job.id);
       return await this.follow(job.id);

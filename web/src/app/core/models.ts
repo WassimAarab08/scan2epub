@@ -47,6 +47,7 @@ export interface ConversionRequest {
   readonly author: string;
   readonly year: string;
   readonly language: string;
+  readonly engine: string;
 }
 
 /** The state of a job of the queue, from `POST /api/jobs`. */

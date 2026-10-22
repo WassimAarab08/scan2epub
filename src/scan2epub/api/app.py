@@ -23,7 +23,12 @@ from pydantic import BaseModel, Field
 
 from scan2epub import __version__
 from scan2epub.api.worker import Worker
-from scan2epub.application.factory import available_engines, build_pipeline, with_language
+from scan2epub.application.factory import (
+    available_engines,
+    build_pipeline,
+    with_engine,
+    with_language,
+)
 from scan2epub.config import Config, load_config
 from scan2epub.domain.models import BookMetadata
 from scan2epub.errors import Scan2EpubError
@@ -222,6 +227,7 @@ def _convert(
     author: str | None,
     year: str | None,
     language: str | None,
+    engine: str | None = None,
 ) -> ConvertResponse:
     """Convert an uploaded PDF and return the summary of the result."""
     if file.content_type not in ACCEPTED_TYPES:
@@ -235,6 +241,8 @@ def _convert(
 
     try:
         effective = with_language(settings, language) if language else settings
+        if engine:
+            effective = with_engine(effective, engine)
         pipeline = build_pipeline(
             effective,
             source,
@@ -360,13 +368,14 @@ def create_app(config: Config | None = None) -> FastAPI:
         author: Annotated[str | None, Form()] = None,
         year: Annotated[str | None, Form()] = None,
         language: Annotated[str | None, Form()] = None,
+        engine: Annotated[str | None, Form()] = None,
     ) -> ConvertResponse:
         """Convert a scanned PDF into an EPUB and return the summary.
 
         The file is stored under the data directory and the EPUB can be
         downloaded from the link in the answer.
         """
-        return _convert(settings, file, title, author, year, language)
+        return _convert(settings, file, title, author, year, language, engine)
 
     @app.get("/api/download/{job}/{name}", tags=["conversion"])
     def download(job: str, name: str) -> Response:
@@ -380,6 +389,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         author: Annotated[str | None, Form()] = None,
         year: Annotated[str | None, Form()] = None,
         language: Annotated[str | None, Form()] = None,
+        engine: Annotated[str | None, Form()] = None,
     ) -> JobResponse:
         """Queue a conversion and return the job.
 
@@ -400,6 +410,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 "author": author or "",
                 "year": year,
                 "language": language or settings.general.language,
+                "engine": engine or settings.general.ocr_engine,
             },
         )
         # The file is moved under the directory of the job, so that the link
@@ -414,6 +425,7 @@ def create_app(config: Config | None = None) -> FastAPI:
             "author": author or "",
             "year": year,
             "language": language or settings.general.language,
+            "engine": engine or settings.general.ocr_engine,
             "source": str(final_source),
             "output": str(output),
         }

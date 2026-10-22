@@ -120,6 +120,9 @@ export class ApiService {
     if (request.language) {
       body.append('language', request.language);
     }
+    if (request.engine) {
+      body.append('engine', request.engine);
+    }
     return body;
   }
 }
