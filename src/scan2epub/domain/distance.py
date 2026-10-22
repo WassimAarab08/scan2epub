@@ -13,6 +13,8 @@ guardrail cheap even for long paragraphs.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 __all__ = [
     "levenshtein",
     "levenshtein_bounded",
@@ -88,8 +90,19 @@ def levenshtein_bounded(a: str, b: str, limit: int) -> int:  # noqa: PLR0911, PL
     return distance if distance <= limit else threshold
 
 
-def levenshtein(a: str, b: str) -> int:
-    """Return the exact Levenshtein distance between ``a`` and ``b``."""
+def levenshtein(a: Sequence[str], b: Sequence[str]) -> int:
+    """Return the exact Levenshtein distance between two sequences.
+
+    The sequences may be strings, or lists of words.
+
+    Args:
+        a: The first sequence.
+        b: The second sequence.
+
+    Returns:
+        The number of insertions, deletions and substitutions that turn one
+        sequence into the other.
+    """
     if a == b:
         return 0
     if not a:
