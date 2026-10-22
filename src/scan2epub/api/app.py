@@ -273,19 +273,29 @@ def _convert(
 
 
 def _download(job: str, name: str) -> Response:
-    """Serve a generated EPUB."""
-    # The path is resolved and then checked against the data directory, so
-    # that a name like ".." can never escape it.
+    """Serve a generated EPUB.
+
+    The names in the URL are only compared with the names on the disk: the
+    path is built from the directory listing, never from the request, so a
+    name such as ".." has no way of leaving the data directory.
+    """
     base = DATA_DIR.resolve()
-    path = (base / job / name).resolve()
-    if path == base or not path.is_relative_to(base):
-        raise HTTPException(status_code=400, detail="Invalid path.")
-    if not path.is_file():
+    directory = next(
+        (entry for entry in base.iterdir() if entry.is_dir() and entry.name == job),
+        None,
+    )
+    if directory is None:
+        raise HTTPException(status_code=404, detail="The file was not found.")
+    path = next(
+        (entry for entry in directory.iterdir() if entry.is_file() and entry.name == name),
+        None,
+    )
+    if path is None:
         raise HTTPException(status_code=404, detail="The file was not found.")
     return Response(
         content=path.read_bytes(),
         media_type="application/epub+zip",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
     )
 
 
