@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from scan2epub.api.app import create_app
 from scan2epub.config import Config, GeneralConfig
+from scan2epub.infrastructure.storage.sqlite_jobs import JobStore
 
 pytestmark = pytest.mark.integration
 
@@ -51,6 +54,24 @@ def test_a_job_is_queued(client: TestClient, sample_pdf: Path) -> None:
     payload = response.json()
     assert payload["status"] == "queued"
     assert payload["id"]
+
+
+def test_the_engine_of_the_request_travels_with_the_job(
+    client: TestClient, sample_pdf: Path
+) -> None:
+    """The engine chosen in the interface is the one the worker runs."""
+    with sample_pdf.open("rb") as handle:
+        response = client.post(
+            "/api/jobs",
+            files={"file": ("sample.pdf", handle, "application/pdf")},
+            data={"engine": "kraken", "language": "eng"},
+        )
+    assert response.status_code == 201, response.text
+    store = cast("JobStore", cast("FastAPI", client.app).state.job_store)
+    job = store.get(response.json()["id"])
+    assert job is not None
+    assert job.options["engine"] == "kraken"
+    assert job.options["language"] == "eng"
 
 
 def test_the_jobs_are_listed(client: TestClient, sample_pdf: Path) -> None:
