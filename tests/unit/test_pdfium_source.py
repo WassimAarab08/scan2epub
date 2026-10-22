@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scan2epub.errors import PipelineError
+from scan2epub.errors import InputError
 from scan2epub.infrastructure.pdf.pdfium_source import PdfiumPageSource, ink_ratio
 
 
@@ -35,17 +35,70 @@ def test_the_number_of_pages_is_reported(sample_pdf: Path) -> None:
 
 
 def test_a_missing_file_is_reported(tmp_path: Path) -> None:
-    """A file that does not exist is an error."""
-    with pytest.raises(PipelineError):
+    """A file that does not exist is an error with a hint."""
+    with pytest.raises(InputError) as error:
         PdfiumPageSource(tmp_path / "missing.pdf")
+    assert "does not exist" in str(error.value)
 
 
 def test_a_file_that_is_not_a_pdf_is_reported(tmp_path: Path) -> None:
-    """A file that is not a PDF is an error."""
+    """A file that is not a PDF is an error with a hint."""
     broken = tmp_path / "broken.pdf"
     broken.write_bytes(b"this is not a PDF")
-    with pytest.raises(PipelineError):
-        PdfiumPageSource(broken).pages()
+    with pytest.raises(InputError) as error:
+        PdfiumPageSource(broken)
+    assert "could not be opened as a PDF" in str(error.value)
+
+
+def test_an_empty_file_is_reported(tmp_path: Path) -> None:
+    """An empty file is an error with a hint."""
+    empty = tmp_path / "empty.pdf"
+    empty.write_bytes(b"")
+    with pytest.raises(InputError) as error:
+        PdfiumPageSource(empty)
+    assert "at least one page" in str(error.value)
+
+
+def test_a_pdf_without_pages_is_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A PDF with no pages is an error with a hint."""
+    import scan2epub.infrastructure.pdf.pdfium_source as module
+
+    class _EmptyDocument:
+        """A document without pages."""
+
+        def __len__(self) -> int:
+            return 0
+
+        def close(self) -> None:
+            """Do nothing."""
+
+    monkeypatch.setattr(module.pdfium, "PdfDocument", lambda path: _EmptyDocument())
+    source = tmp_path / "empty.pdf"
+    source.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    with pytest.raises(InputError) as error:
+        PdfiumPageSource(source)
+    assert "no pages" in str(error.value)
+
+
+def test_an_encrypted_pdf_is_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A PDF that cannot be read is an error with a hint."""
+    import scan2epub.infrastructure.pdf.pdfium_source as module
+
+    class _LockedDocument:
+        """A document that asks for a password."""
+
+        def __len__(self) -> int:
+            raise RuntimeError("password required")
+
+        def close(self) -> None:
+            """Do nothing."""
+
+    monkeypatch.setattr(module.pdfium, "PdfDocument", lambda path: _LockedDocument())
+    source = tmp_path / "locked.pdf"
+    source.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    with pytest.raises(InputError) as error:
+        PdfiumPageSource(source)
+    assert "encrypted" in str(error.value)
 
 
 def test_a_blank_page_is_detected(tmp_path: Path) -> None:

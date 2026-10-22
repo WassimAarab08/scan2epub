@@ -35,7 +35,17 @@ _PAGE_NUMBER_RE = re.compile(r"^[^0-9A-Za-z]*\d{1,5}[^0-9A-Za-z]*$")
 _FOOTNOTE_RE = re.compile(r"^\s*[\(\[]?(\d{1,3})[\)\].:]?\s+\S")
 
 #: A word continuation after a hyphen always starts with a lowercase letter.
-_CONTINUATION_RE = re.compile(r"^[a-záéíóúüñçàèìòùâêîôûäëïöüãõæœß]")
+#: A word continuation after a hyphen always starts with a lowercase letter.
+#: The accented characters are written as escapes so that the source of the
+#: file stays ASCII and the character class holds no duplicate.
+_CONTINUATION_RE = re.compile(
+    "^[a-z"
+    "\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1\u00e7"  # a e i o u n c
+    "\u00e0\u00e8\u00ec\u00f2\u00f9"  # grave
+    "\u00e2\u00ea\u00ee\u00f4\u00fb"  # circumflex
+    "\u00e4\u00eb\u00ef\u00f6\u00e3\u00f5"  # umlaut and tilde
+    "\u00e6\u0153\u00df]"  # ae oe sharp s
+)
 
 #: A conjunction at the end of a line. The word must stand on its own: the
 #: English word "company" does not end with a conjunction.

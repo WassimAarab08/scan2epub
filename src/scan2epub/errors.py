@@ -12,6 +12,7 @@ __all__ = [
     "ConfigurationError",
     "EngineNotAvailableError",
     "EpubValidationError",
+    "InputError",
     "OcrError",
     "PipelineError",
     "Scan2EpubError",
@@ -28,6 +29,14 @@ class ConfigurationError(Scan2EpubError):
 
 class EngineNotAvailableError(Scan2EpubError):
     """A requested OCR engine or text corrector is not installed or not registered."""
+
+
+class InputError(Scan2EpubError):
+    """The file that was given to the tool cannot be converted.
+
+    The message always says what to do next, because the user can only fix
+    the problem themselves.
+    """
 
 
 class OcrError(Scan2EpubError):

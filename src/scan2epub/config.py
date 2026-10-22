@@ -22,6 +22,7 @@ from typing import Any, Final, cast
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from scan2epub.domain.languages import LANGUAGE_CODES, ocr_languages
 from scan2epub.errors import ConfigurationError
 
 __all__ = [
@@ -33,27 +34,11 @@ __all__ = [
     "PreprocessConfig",
     "default_config_path",
     "load_config",
+    "ocr_languages",
     "output_language_for",
 ]
 
 ENV_PREFIX: Final[str] = "SCAN2EPUB_"
-
-#: Maps the OCR language codes to the BCP-47 tags used in the EPUB metadata.
-LANGUAGE_CODES: Final[dict[str, str]] = {
-    "spa": "es",
-    "spa_old": "es",
-    "eng": "en",
-    "fra": "fr",
-    "deu": "de",
-    "ita": "it",
-    "por": "pt",
-    "cat": "ca",
-    "glg": "gl",
-    "nld": "nl",
-    "lat": "la",
-    "rus": "ru",
-    "ell": "el",
-}
 
 
 def output_language_for(ocr_language: str, default: str = "es") -> str:
@@ -95,6 +80,7 @@ class GeneralConfig(_Section):
     author: str | None = None
     year: str | None = None
     validate_epub: bool = True
+    cache_dir: str | None = None
 
 
 class PreprocessConfig(_Section):
@@ -157,6 +143,15 @@ class Config:
     def corrector_provider(self, name: str) -> OcrProviderConfig:
         """Return the configuration of the text corrector ``name``."""
         return self.correctors.get(name, OcrProviderConfig())
+
+    @property
+    def cache_directory(self) -> Path:
+        """Return the directory where the artefacts are cached."""
+        if self.general.cache_dir:
+            return Path(self.general.cache_dir)
+        base = os.environ.get("XDG_CACHE_HOME")
+        root = Path(base) if base else Path.home() / ".cache"
+        return root / "scan2epub"
 
 
 def default_config_path() -> Path:

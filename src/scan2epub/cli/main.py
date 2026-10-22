@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import functools
 import sys
+from collections.abc import Callable
 
 import typer
 
@@ -10,7 +12,26 @@ from scan2epub import __version__
 from scan2epub.errors import Scan2EpubError
 from scan2epub.logging import configure_logging
 
-__all__ = ["app", "main"]
+__all__ = ["app", "handle_errors", "main"]
+
+
+def handle_errors[**P, R](function: Callable[P, R]) -> Callable[P, R]:
+    """Turn the errors of the library into a clear message.
+
+    Without it, a failure ends with a Python traceback. With it, the user
+    reads what went wrong and what to do about it.
+    """
+
+    @functools.wraps(function)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return function(*args, **kwargs)
+        except Scan2EpubError as exc:
+            typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1) from exc
+
+    return wrapper
+
 
 app = typer.Typer(
     name="scan2epub",
@@ -58,12 +79,13 @@ def main() -> None:
 
 def _register_commands() -> None:
     """Import and register every command module."""
-    from scan2epub.cli.commands import config, convert, doctor, serve  # noqa: PLC0415
+    from scan2epub.cli.commands import config, convert, doctor, eval, serve  # noqa: PLC0415
 
-    app.command(name="convert")(convert.convert)
-    app.command(name="doctor")(doctor.doctor)
-    app.command(name="serve")(serve.serve)
-    app.command(name="config")(config.config)
+    app.command(name="convert")(handle_errors(convert.convert))
+    app.command(name="doctor")(handle_errors(doctor.doctor))
+    app.command(name="serve")(handle_errors(serve.serve))
+    app.command(name="config")(handle_errors(config.config))
+    app.command(name="eval")(handle_errors(eval.eval))
 
 
 _register_commands()

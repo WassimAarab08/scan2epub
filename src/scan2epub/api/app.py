@@ -256,10 +256,13 @@ def _convert(
 
 def _download(job: str, name: str) -> Response:
     """Serve a generated EPUB."""
-    if "/" in job or "/" in name or ".." in job or ".." in name:
+    # The path is resolved and then checked against the data directory, so
+    # that a name like ".." can never escape it.
+    base = DATA_DIR.resolve()
+    path = (base / job / name).resolve()
+    if path == base or not path.is_relative_to(base):
         raise HTTPException(status_code=400, detail="Invalid path.")
-    path = (DATA_DIR / job / name).resolve()
-    if not path.is_file() or DATA_DIR.resolve() not in path.parents:
+    if not path.is_file():
         raise HTTPException(status_code=404, detail="The file was not found.")
     return Response(
         content=path.read_bytes(),

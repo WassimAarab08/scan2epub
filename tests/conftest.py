@@ -51,7 +51,7 @@ def sample_pdf(tmp_path: Path) -> Path:
     return make_text_pdf(tmp_path / "sample.pdf", pages=3)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def require_tesseract() -> None:
     """Skip the test when Tesseract is not installed."""
     from scan2epub.infrastructure.ocr.tesseract import tesseract_version

@@ -12,15 +12,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-from scan2epub.application.cache import FileCache, hash_file, hash_json
+from scan2epub.application.cache import (
+    FileCache,
+    block_from_dict,
+    block_to_dict,
+    hash_file,
+    hash_json,
+)
 from scan2epub.application.progress import ProgressEvent, ProgressReporter
 from scan2epub.application.stages.clean import CleanResult, clean_pages
 from scan2epub.application.stages.structure import structure_book
 from scan2epub.application.stages.validate import ValidationReport, validate_epub
 from scan2epub.config import Config
 from scan2epub.domain.models import (
-    BBox,
-    BlockKind,
     Book,
     BookMetadata,
     PageContent,
@@ -52,71 +56,6 @@ class PipelineResult:
     epub: EpubResult
     page_count: int
     duration_seconds: float
-
-
-def _block_to_dict(block: TextBlock) -> dict[str, object]:
-    """Serialise a text block for the cache."""
-    return {
-        "lines": list(block.lines),
-        "bbox": [block.bbox.x0, block.bbox.y0, block.bbox.x1, block.bbox.y1],
-        "confidence": block.confidence,
-        "kind": block.kind.value,
-        "order": block.order,
-        "page": block.page,
-        "column": block.column,
-        "level": block.level,
-    }
-
-
-def _as_int(value: object, default: int = 0) -> int:
-    """Read an integer from a cached payload."""
-    if isinstance(value, bool):
-        return int(value)
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return int(value)
-    if isinstance(value, str):
-        try:
-            return int(value)
-        except ValueError:
-            return default
-    return default
-
-
-def _as_float(value: object, default: float = 0.0) -> float:
-    """Read a float from a cached payload."""
-    if isinstance(value, bool):
-        return float(value)
-    if isinstance(value, int | float):
-        return float(value)
-    if isinstance(value, str):
-        try:
-            return float(value)
-        except ValueError:
-            return default
-    return default
-
-
-def _block_from_dict(payload: dict[str, object]) -> TextBlock:
-    """Deserialise a text block from the cache."""
-    bbox = payload.get("bbox")
-    if not isinstance(bbox, list):
-        raise TypeError("Invalid cached block: the bounding box is not a list")
-    x0, y0, x1, y1 = (_as_float(value) for value in cast("list[object]", bbox))
-    lines = payload.get("lines")
-    if not isinstance(lines, list):
-        raise TypeError("Invalid cached block: the lines are not a list")
-    return TextBlock(
-        lines=tuple(str(line) for line in cast("list[object]", lines)),
-        bbox=BBox(x0, y0, x1, y1),
-        confidence=_as_float(payload.get("confidence"), 1.0),
-        kind=BlockKind(str(payload.get("kind", "body"))),
-        order=_as_int(payload.get("order")),
-        page=_as_int(payload.get("page")),
-        column=_as_int(payload.get("column")),
-        level=_as_int(payload.get("level")),
-    )
 
 
 class Pipeline:
@@ -313,10 +252,10 @@ class Pipeline:
             blocks: list[TextBlock] = []
             for payload in cast("list[object]", cached):
                 if isinstance(payload, dict):
-                    blocks.append(_block_from_dict(cast("dict[str, object]", payload)))
+                    blocks.append(block_from_dict(cast("dict[str, object]", payload)))
             return blocks
         blocks = list(self.ocr.recognize(page))
-        self.cache.put_json(key, [_block_to_dict(block) for block in blocks])
+        self.cache.put_json(key, [block_to_dict(block) for block in blocks])
         return blocks
 
     def _correct(self, result: CleanResult) -> CleanResult:
