@@ -17,7 +17,7 @@ from typing import Any
 from scan2epub.application.factory import build_pipeline, with_engine, with_language
 from scan2epub.application.pipeline import PipelineResult
 from scan2epub.application.progress import ProgressEvent, ProgressReporter
-from scan2epub.config import Config
+from scan2epub.config import Config, output_language_for
 from scan2epub.domain.models import BookMetadata
 from scan2epub.infrastructure.storage.sqlite_jobs import Job, JobStatus, JobStore
 from scan2epub.logging import get_logger
@@ -207,12 +207,7 @@ class Worker:
 
         pipeline = build_pipeline(config, source, work)
         pipeline.reporter = self._reporter(job.id)
-        metadata = BookMetadata(
-            title=str(options.get("title", source.stem)),
-            author=str(options.get("author", "")),
-            language=str(options.get("language", self.config.general.language)),
-            year=options.get("year"),
-        )
+        metadata = _metadata_for(options, config, source.stem)
         result = pipeline.run(metadata, output)
         return output, _summary_of(result, source.stem)
 
@@ -232,6 +227,22 @@ class Worker:
             )
 
         return report
+
+
+def _metadata_for(options: dict[str, Any], config: Config, fallback_title: str) -> BookMetadata:
+    """Build the metadata of the book from the options of a job.
+
+    The language of the *recognition* is the one that Tesseract knows
+    (``spa``); the language of the *book* is the BCP-47 tag that an EPUB
+    reader understands (``es``), and the two are not the same string.
+    """
+    language = config.general.output_language or output_language_for(config.general.language)
+    return BookMetadata(
+        title=str(options.get("title", fallback_title)),
+        author=str(options.get("author", "")),
+        language=language,
+        year=options.get("year"),
+    )
 
 
 def status_counts(store: JobStore) -> dict[str, int]:

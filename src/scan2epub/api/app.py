@@ -29,7 +29,7 @@ from scan2epub.application.factory import (
     with_engine,
     with_language,
 )
-from scan2epub.config import Config, load_config
+from scan2epub.config import Config, load_config, output_language_for
 from scan2epub.domain.models import BookMetadata
 from scan2epub.errors import Scan2EpubError
 from scan2epub.infrastructure.storage.sqlite_jobs import Job, JobStore
@@ -252,7 +252,8 @@ def _convert(
         metadata = BookMetadata(
             title=title or "",
             author=author or "",
-            language=effective.general.output_language or effective.general.language or "es",
+            language=effective.general.output_language
+            or output_language_for(effective.general.language),
             year=year,
         )
         result = pipeline.run(metadata, output)

@@ -8,8 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from scan2epub.api.worker import Worker, WorkerEvent
-from scan2epub.config import Config
+from scan2epub.api.worker import Worker, WorkerEvent, _metadata_for
+from scan2epub.application.factory import with_language
+from scan2epub.config import Config, GeneralConfig
 from scan2epub.infrastructure.storage.sqlite_jobs import JobStatus, JobStore
 
 
@@ -38,6 +39,19 @@ def test_every_thread_gets_a_connection_of_its_own(store: JobStore) -> None:
     thread.join()
 
     assert seen and seen[0] is not connection
+
+
+def test_the_book_takes_the_tag_of_its_language_not_the_code_of_the_ocr() -> None:
+    """The book is ``es`` though Tesseract is told ``spa``.
+
+    The code of the recognition engine is not a language tag that a reader
+    understands, and putting it in ``dc:language`` made an EPUB in Spanish
+    declare itself in a language that no reader knows.
+    """
+    config = Config(general=GeneralConfig(language="spa"))
+    metadata = _metadata_for({"title": "El libro", "language": "spa"}, config, "libro")
+    assert metadata.language == "es"
+    assert _metadata_for({}, with_language(config, "eng"), "libro").language == "en"
 
 
 def test_a_job_is_created(store: JobStore) -> None:
